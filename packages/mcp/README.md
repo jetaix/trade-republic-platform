@@ -14,7 +14,7 @@ server are local to this package (`lib/`).
 | --- | --- |
 | `tr_authenticate` | **Opens a browser** to collect phone + PIN + 2FA, logs in, and **saves the session to disk** |
 | `tr_logout` | Close the connection and delete the saved session |
-| `tr_status` | Session TTL, WAF/WS state, account numbers |
+| `tr_status` | Full account overview — identity, features, account numbers + **IBAN**, live portfolio value with a sparkline, and session/WebSocket state |
 | `tr_portfolio_chart` | Portfolio value time series (REST) |
 | `tr_positions` | Current holdings incl. crypto (WS `compactPortfolioByType`) |
 | `tr_cash` | Cash balances (WS `availableCash`) |

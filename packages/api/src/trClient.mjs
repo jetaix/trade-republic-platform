@@ -182,4 +182,17 @@ export class TRClient {
     if (!res.ok) throw new Error(`chart failed: HTTP ${res.status}`);
     return res.json();
   }
+
+  /** Feature flags from the session JWT, as plain strings. */
+  features() {
+    return (this.claims()?.featuresEnabled ?? []).map((f) => f.feature).filter(Boolean);
+  }
+
+  /** Account settings / personal details (incl. the cash IBAN, when present). */
+  async getAccountInfo() {
+    await this.ensureSession();
+    const res = await this.#request('GET', '/api/v2/auth/account');
+    if (!res.ok) throw new Error(`account info failed: HTTP ${res.status}`);
+    return res.json();
+  }
 }

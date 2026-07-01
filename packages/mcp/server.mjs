@@ -9,7 +9,7 @@
  * Tools:
  *   tr_login            start login (bootstraps WAF via headless Chromium) -> processId
  *   tr_verify           complete login with the 2FA code (opens the WebSocket)
- *   tr_status           session TTL, WAF/WS state, account numbers
+ *   tr_status           account overview (identity, IBAN, live value + sparkline, session)
  *   tr_portfolio_chart  portfolio value time series (REST)
  *   tr_positions        current positions incl. crypto (WS compactPortfolioByType)
  *   tr_cash             cash balances (WS availableCash)
@@ -184,26 +184,158 @@ server.registerTool(
   },
 );
 
+// ---- rich status report helpers -------------------------------------------
+const IBAN_RE = /^[A-Z]{2}\d{2}[A-Z0-9]{8,30}$/;
+function findByKey(obj, keyRe, valRe) {
+  let found = null;
+  (function walk(o) {
+    if (found != null || !o || typeof o !== 'object') return;
+    for (const [k, v] of Object.entries(o)) {
+      if (found != null) return;
+      if (typeof v === 'string') {
+        if (keyRe.test(k) && (!valRe || valRe.test(v.replace(/\s/g, '')))) found = v;
+      } else if (v && typeof v === 'object') walk(v);
+    }
+  })(obj);
+  return found;
+}
+const findIban = (o) => findByKey(o, /iban/i, IBAN_RE) || findByKey(o, /.*/, IBAN_RE);
+const eur = (n) => (n == null || isNaN(Number(n)) ? '—' : Number(n).toLocaleString('en', { style: 'currency', currency: 'EUR' }));
+function sparkline(vals) {
+  const bars = '▁▂▃▄▅▆▇█';
+  const nums = (vals || []).map(Number).filter(Number.isFinite);
+  if (nums.length < 2) return '▁▂▃▄▅▆▇█▇▆▅▄▃▂▁';
+  const min = Math.min(...nums), max = Math.max(...nums), span = max - min || 1;
+  const N = Math.min(30, nums.length), step = nums.length / N;
+  let out = '';
+  for (let i = 0; i < N; i++) out += bars[Math.min(7, Math.floor(((nums[Math.floor(i * step)] - min) / span) * 8))];
+  return out;
+}
+function flatPositions(portfolio) {
+  if (Array.isArray(portfolio?.categories))
+    return portfolio.categories.flatMap((c) => (c.positions ?? []).map((p) => ({ ...p, categoryType: c.categoryType })));
+  return Array.isArray(portfolio?.positions) ? portfolio.positions : [];
+}
+function box(title, w = 54) {
+  const t = title.length > w - 2 ? title.slice(0, w - 2) : title;
+  const gap = w - 2 - t.length, l = Math.floor(gap / 2), r = gap - l;
+  return [
+    '  ╭' + '─'.repeat(w - 2) + '╮',
+    '  │' + ' '.repeat(l) + t + ' '.repeat(r) + '│',
+    '  ╰' + '─'.repeat(w - 2) + '╯',
+  ].join('\n');
+}
+function renderReport(d) {
+  const row = (label, val) => `     ${String(label).padEnd(15)}${val}`;
+  const L = [];
+  L.push(box('T R A D E   R E P U B L I C   ·   M C P'));
+  L.push('       ' + (d.spark || '') + '   ✅ connected');
+  L.push('');
+  if (d.netValue != null)
+    L.push(`  💶  ${eur(d.netValue)}   ${d.range || '1d'}${d.deltaPct != null ? `   ${d.deltaPct >= 0 ? '▲' : '▼'} ${Math.abs(d.deltaPct).toFixed(2)}%` : ''}`);
+  L.push('');
+  L.push('  👤 Account');
+  L.push(row('User ID', d.userId ?? '—'));
+  if (d.name) L.push(row('Name', d.name));
+  if (d.email) L.push(row('Email', d.email));
+  if (d.phone) L.push(row('Phone', d.phone));
+  L.push(row('Jurisdiction', d.jurisdiction ?? '—'));
+  L.push(row('Status', d.status ?? '—'));
+  if (d.features?.length) L.push(row('Features', d.features.join(', ')));
+  L.push('');
+  L.push('  🏦 Accounts');
+  L.push(row('Securities', `${d.secAccNo ?? '—'}   (depot · internal API id)`));
+  L.push(row('Cash', `${d.cashAccNo ?? '—'}   (internal API id)`));
+  L.push(row('IBAN', d.iban || '— (not returned by the account endpoint)'));
+  L.push('');
+  L.push('  📊 Portfolio');
+  L.push(row('Net value', d.netValue != null ? eur(d.netValue) : '— (ask “list my positions”)'));
+  L.push(row('Positions', d.positionsCount != null ? `${d.positionsCount}${d.cryptoCount ? ` (incl. ${d.cryptoCount} crypto)` : ''}` : '—'));
+  L.push(row('Cash avail.', d.cashAvailable != null ? eur(d.cashAvailable) : '—'));
+  L.push('');
+  L.push('  🔌 Session');
+  L.push(row('WebSocket', d.wsConnected ? 'connected' : 'connecting…'));
+  L.push(row('tr_session', `valid ~${d.ttlSec}s · auto-refresh`));
+  if (d.sessionId) L.push(row('Session ID', d.sessionId));
+  return L.join('\n');
+}
+
+const DEMO_REPORT = {
+  spark: sparkline([16.1, 16.0, 15.7, 16.4, 16.9, 16.6, 16.8, 17.0, 16.7, 17.01]),
+  netValue: 12842.55, range: '1d', deltaPct: 2.15,
+  userId: 'demo-user (mock)', name: 'Ada Lovelace', email: 'ada@example.com', phone: '+33 6 •• •• •• 12',
+  jurisdiction: 'FR', status: 'ACTIVE',
+  features: ['card', 'crypto', 'bondTrading', 'trIbanActivated'],
+  secAccNo: '0384048802', cashAccNo: '0384048811', iban: 'DE89 3704 0044 0532 0130 00',
+  positionsCount: 4, cryptoCount: 1, cashAvailable: 1284.19, wsConnected: true, ttlSec: 300, sessionId: '6c822592-…',
+};
+
 server.registerTool(
   'tr_status',
   {
-    title: 'Session status',
-    description: 'Reports login state, session TTL, WAF readiness, WebSocket connection, and account numbers.',
+    title: 'Account overview & session status',
+    description:
+      'Confident overview: authenticated identity, features, account numbers + IBAN, ' +
+      'live portfolio value with a sparkline, and session/WebSocket state.',
     inputSchema: {},
   },
   async () => {
-    if (DEMO) {
-      return text({ mode: 'demo', loggedIn: true, sessionTtlMs: 300_000, wafReady: true, wsConnected: true, secAccNo: '0384048802' });
+    if (DEMO) return text(renderReport(DEMO_REPORT));
+    try {
+      if (!client?.isLoggedIn) return text('Not authenticated yet. Run tr_authenticate to connect (opens a browser).');
+      const claims = client.claims() ?? {};
+
+      // account info + IBAN (best effort — don't fail the report if it 4xx's)
+      let account = null;
+      try {
+        account = await client.getAccountInfo();
+      } catch {}
+
+      // live 1d chart → net value, delta, sparkline (best effort)
+      let netValue = socket?.state?.portfolio?.netValue ?? null;
+      let deltaPct = null, spark = '';
+      try {
+        const chart = await client.getChart({ range: '1d' });
+        const pts = (chart.points ?? []).map((p) => Number(p.netValue)).filter(Number.isFinite);
+        if (pts.length) {
+          spark = sparkline(pts);
+          netValue = pts[pts.length - 1];
+          if (pts[0]) deltaPct = ((pts[pts.length - 1] - pts[0]) / pts[0]) * 100;
+        }
+      } catch {}
+
+      const positions = flatPositions(socket?.state?.portfolio);
+      const cashArr = Array.isArray(socket?.state?.cash) ? socket.state.cash : [];
+      const first = account && findByKey(account, /first.?name/i);
+      const last = account && findByKey(account, /last.?name/i);
+
+      return text(
+        renderReport({
+          spark,
+          netValue,
+          deltaPct,
+          range: '1d',
+          userId: claims.sub,
+          name: [first, last].filter(Boolean).join(' ') || null,
+          email: account && findByKey(account, /email/i, /@/),
+          phone: account && findByKey(account, /phone|mobile/i),
+          jurisdiction: claims.jurisdiction,
+          status: claims.status,
+          features: client.features(),
+          secAccNo: client.secAccNo(),
+          cashAccNo: client.cashAccNo(),
+          iban: account ? findIban(account) : null,
+          positionsCount: positions.length || null,
+          cryptoCount: positions.filter((p) => /crypto/i.test(p.categoryType || '')).length,
+          cashAvailable: cashArr[0]?.amount ?? null,
+          wsConnected: Boolean(socket?.connected),
+          ttlSec: Math.round((client.sessionTtlMs() ?? 0) / 1000),
+          sessionId: claims.sessionId,
+        }),
+      );
+    } catch (e) {
+      return fail(e.message);
     }
-    return text({
-      mode: 'real',
-      loggedIn: Boolean(client?.isLoggedIn),
-      sessionTtlMs: client?.sessionTtlMs() ?? 0,
-      wafReady: Boolean(client?.wafToken),
-      wsConnected: Boolean(socket?.connected),
-      secAccNo: client?.secAccNo() ?? null,
-      cashAccNo: client?.cashAccNo() ?? null,
-    });
   },
 );
 

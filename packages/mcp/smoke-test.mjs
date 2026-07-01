@@ -65,8 +65,9 @@ console.log('resources →', resources.result.resources.map((r) => r.uri).join('
 assert(resources.result.resources.length === 2, 'exposes 2 resources');
 
 const status = await send('tools/call', { name: 'tr_status', arguments: {} });
-const statusObj = JSON.parse(status.result.content[0].text);
-assert(statusObj.mode === 'demo' && statusObj.loggedIn, 'tr_status returns demo/loggedIn');
+const statusText = status.result.content[0].text;
+assert(/connected/.test(statusText) && /IBAN/.test(statusText) && /Net value/.test(statusText), 'tr_status returns the overview report');
+if (process.env.SHOW_STATUS) console.log('\n' + statusText + '\n');
 
 const chart = await send('tools/call', { name: 'tr_portfolio_chart', arguments: { range: '5d' } });
 const chartObj = JSON.parse(chart.result.content[0].text);
