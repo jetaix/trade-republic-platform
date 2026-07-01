@@ -120,20 +120,42 @@ startup. So after the first browser login it "just works" across restarts. To
 start fresh (or switch accounts): `tr_logout`, or delete that file, then
 `tr_authenticate` again.
 
+### What "auto-refreshed" means
+
+Trade Republic hands back two tokens at login, and they do different jobs:
+
+| Token | Lifetime | Role |
+| --- | --- | --- |
+| `tr_session` (a JWT) | **5 minutes** | The key that authorizes every API call |
+| `tr_refresh` (+ `JSESSIONID`) | much longer (hours) | Mints a **new** `tr_session` **without** re-entering phone/PIN/2FA |
+
+The `tr_session` is short-lived on purpose. **Auto-refresh** = the server calls
+`GET /api/v1/auth/web/session` (using the `tr_refresh` cookie) to swap in a fresh
+5-minute token *before the old one expires* — silently, so you never get logged out:
+
+```
+login ─► tr_session (5m) ──auto-refresh──► tr_session (5m) ──auto-refresh──► …
+         (the refresh token does the work in the background)
+```
+
+It's the same idea as a bank website "keeping you signed in": the real token
+rotates every few minutes, but you stay connected. Auto-refresh **never** re-opens
+the browser or asks for 2FA — that's *re-authentication*, a separate thing that
+only happens when the refresh token itself can no longer work.
+
 ### How persistence works (and its limits)
 
-The `tr_session` JWT is **meant to expire every 5 minutes** — that's normal. The
-server keeps the long-lived `tr_refresh` cookie and mints a fresh token:
+The server mints a fresh `tr_session`:
 
 - **On startup** (`restoreSession`) and **before every tool call** (`ensureSession`).
 - **Proactively every ~4 min** via a background keepalive, so the session stays
   alive even while the server sits idle (no tool calls needed).
 
-So it survives restarts and idle time. What it **can't** beat: Trade Republic's
-own server-side session lifetime and revocations — logging in on the app/another
-browser, a security reset, or a long outage can invalidate the refresh token. When
-that happens the next refresh `401`s, the keepalive stops, and you simply run
-`tr_authenticate` once more.
+The cookie jar (incl. `tr_refresh`) is saved to disk, so this survives restarts
+**and** idle time. What it **can't** beat: Trade Republic's own server-side session
+lifetime and revocations — logging in on the app/another browser, a security reset,
+or a long outage can invalidate the refresh token. When that happens the next
+refresh `401`s, the keepalive stops, and you simply run `tr_authenticate` once more.
 
 ## Run with REAL data — step by step (non-technical)
 
