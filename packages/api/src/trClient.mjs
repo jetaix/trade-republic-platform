@@ -42,8 +42,14 @@ export class TRClient {
     };
   }
 
+  /**
+   * True when we hold a session that can be used or refreshed — NOT just when the
+   * 5-minute JWT is currently valid. The JWT expiring is normal; `ensureSession`
+   * mints a new one via the refresh cookie on the next call. Treating an expired
+   * JWT as "logged out" would force a re-login every 5 minutes.
+   */
   get isLoggedIn() {
-    return this.sessionTtlMs() > 0;
+    return this.jar.has('tr_refresh') || this.jar.has('tr_session');
   }
 
   // --- low-level ----------------------------------------------------------

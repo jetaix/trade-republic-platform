@@ -179,8 +179,14 @@ server.registerTool(
   async () => {
     if (DEMO) return text('Authenticated (DEMO mode — no browser needed).');
     try {
+      // Already connected? Confirm by actually refreshing (don't trust a stale JWT).
       if (client?.isLoggedIn) {
-        return text(`Already authenticated. Session valid for ~${Math.round(client.sessionTtlMs() / 1000)}s.`);
+        try {
+          await client.ensureSession();
+          return text(`Already authenticated. Session valid for ~${Math.round(client.sessionTtlMs() / 1000)}s.`);
+        } catch {
+          handleReauth(); // refresh token is dead → fall through to a fresh browser login
+        }
       }
       const { TRClient, bootstrapWaf } = await realDeps();
       if (!client) client = new TRClient();
@@ -398,6 +404,7 @@ server.registerTool(
     if (DEMO) return text(renderReport(DEMO_REPORT));
     try {
       if (!client?.isLoggedIn) return text('Not authenticated yet. Run tr_authenticate to connect (opens a browser).');
+      await client.ensureSession(); // renew the 5-min token so the report is live (throws REAUTH if the session is dead)
       const claims = client.claims() ?? {};
       const fmt = (s) => { try { return new Date(s * 1000).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'; } catch { return null; } };
 
