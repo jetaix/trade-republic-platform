@@ -120,6 +120,21 @@ startup. So after the first browser login it "just works" across restarts. To
 start fresh (or switch accounts): `tr_logout`, or delete that file, then
 `tr_authenticate` again.
 
+### How persistence works (and its limits)
+
+The `tr_session` JWT is **meant to expire every 5 minutes** — that's normal. The
+server keeps the long-lived `tr_refresh` cookie and mints a fresh token:
+
+- **On startup** (`restoreSession`) and **before every tool call** (`ensureSession`).
+- **Proactively every ~4 min** via a background keepalive, so the session stays
+  alive even while the server sits idle (no tool calls needed).
+
+So it survives restarts and idle time. What it **can't** beat: Trade Republic's
+own server-side session lifetime and revocations — logging in on the app/another
+browser, a security reset, or a long outage can invalidate the refresh token. When
+that happens the next refresh `401`s, the keepalive stops, and you simply run
+`tr_authenticate` once more.
+
 ## Run with REAL data — step by step (non-technical)
 
 Follow these exactly. Copy each command, paste it into **Terminal**, press Enter.

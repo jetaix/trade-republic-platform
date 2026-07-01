@@ -113,6 +113,33 @@ async function startSocket() {
   socket.start().catch((e) => console.error('[ws] start failed:', e.message));
 }
 
+/**
+ * Proactive keepalive: refresh the session every ~4 min (before the 5-min JWT
+ * expiry) so it stays alive while the server runs, even when no tool is called.
+ * If TR invalidates the session, stop and require re-authentication.
+ */
+let keepaliveTimer = null;
+function startKeepalive() {
+  stopKeepalive();
+  keepaliveTimer = setInterval(async () => {
+    if (!client) return;
+    try {
+      await client.refreshSession(); // onUpdate -> persist()
+      console.error(`[keepalive] session refreshed, TTL ~${Math.round(client.sessionTtlMs() / 1000)}s`);
+    } catch (e) {
+      console.error('[keepalive] refresh failed — re-auth needed:', e.message);
+      stopKeepalive();
+      socket?.close();
+      socket = null;
+      client = null;
+    }
+  }, 240_000);
+}
+function stopKeepalive() {
+  if (keepaliveTimer) clearInterval(keepaliveTimer);
+  keepaliveTimer = null;
+}
+
 // ---- server ----------------------------------------------------------------
 const server = new McpServer({ name: 'trade-republic', version: '0.1.0' });
 
@@ -142,6 +169,7 @@ server.registerTool(
         bootstrapWaf,
         onComplete: async () => {
           persist();
+          startKeepalive();
           await startSocket();
         },
       });
@@ -175,6 +203,7 @@ server.registerTool(
   },
   async () => {
     if (DEMO) return text('Logged out (DEMO).');
+    stopKeepalive();
     socket?.close();
     socket = null;
     client = null;
@@ -509,6 +538,7 @@ async function restoreSession() {
     client.onUpdate = persist;
     await client.refreshSession(); // fails (REAUTH) if the session is dead
     persist();
+    startKeepalive();
     await startSocket();
     console.error(`[tr-mcp] restored session, TTL ~${Math.round(client.sessionTtlMs() / 1000)}s`);
   } catch (e) {
