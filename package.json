@@ -1,0 +1,21 @@
+{
+  "name": "trade-republic-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Unofficial Trade Republic API, MCP server, demo app, and docs website",
+  "packageManager": "pnpm@11.1.2",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "mcp": "pnpm --filter @trade-republic/mcp start",
+    "mcp:demo": "pnpm --filter @trade-republic/mcp demo",
+    "demo": "pnpm --filter @trade-republic/demo dev",
+    "website": "pnpm --filter @trade-republic/website dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.3.0"
+  }
+}

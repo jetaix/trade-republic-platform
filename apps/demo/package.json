@@ -1,0 +1,16 @@
+{
+  "name": "@trade-republic/demo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Live demo: React app + Node proxy driving the Trade Republic API",
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.mjs",
+    "dev": "TR_DEMO=1 node server/server.mjs",
+    "demo": "TR_DEMO=1 node server/server.mjs"
+  },
+  "dependencies": {
+    "@trade-republic/api": "workspace:*",
+    "express": "^4.21.2"
+  }
+}

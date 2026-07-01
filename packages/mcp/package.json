@@ -1,0 +1,18 @@
+{
+  "name": "@trade-republic/mcp",
+  "version": "0.1.0",
+  "description": "Model Context Protocol server for the (unofficial) Trade Republic API",
+  "type": "module",
+  "bin": { "trade-republic-mcp": "server.mjs" },
+  "files": ["server.mjs", "lib"],
+  "scripts": {
+    "start": "node server.mjs",
+    "demo": "TR_DEMO=1 node server.mjs",
+    "test": "TR_DEMO=1 node smoke-test.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "@trade-republic/api": "workspace:*",
+    "zod": "^4.4.3"
+  }
+}

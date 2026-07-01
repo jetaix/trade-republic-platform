@@ -1,0 +1,20 @@
+{
+  "name": "@trade-republic/api",
+  "version": "0.1.0",
+  "description": "Unofficial Trade Republic API client (REST + WebSocket) and OpenAPI 3.1 spec",
+  "type": "module",
+  "main": "./src/index.mjs",
+  "exports": {
+    ".": "./src/index.mjs",
+    "./openapi.yaml": "./openapi.yaml",
+    "./guide.md": "./guide.md"
+  },
+  "files": ["src", "openapi.yaml", "guide.md", "persistent-poll.mjs"],
+  "scripts": {
+    "lint": "node --check src/index.mjs && node --check src/trClient.mjs && node --check src/trSocket.mjs && node --check src/waf.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.1",
+    "ws": "^8.18.0"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+.turbo/
+dist/
+*.log
+.claude/
+
+# website build artifacts (bundled from @trade-republic/api at build time)
+apps/website/public/openapi.yaml
+apps/website/public/docs.md
+.gstack/

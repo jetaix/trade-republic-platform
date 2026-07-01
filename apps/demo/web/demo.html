@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trade Republic API — Live Demo</title>
+    <!-- No build step: React + Babel from CDN. Small on purpose. -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Pinned to Babel 7: its react preset uses the classic JSX runtime
+         (React.createElement, via the global UMD above). Babel 8's default
+         switched to the automatic runtime, which emits `import
+         "react/jsx-runtime"` — illegal in a non-module inline script. -->
+    <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        background: #0e1116; color: #e6e9ef; display: flex; justify-content: center;
+      }
+      .app { width: 100%; max-width: 760px; padding: 32px 20px 64px; }
+      h1 { font-size: 22px; margin: 0 0 4px; }
+      .sub { color: #8b93a7; margin: 0 0 24px; font-size: 13px; }
+      .sub a { color: #6ea8fe; }
+      .card { background: #161b22; border: 1px solid #232a35; border-radius: 12px; padding: 20px; margin-bottom: 18px; }
+      label { display: block; font-size: 12px; color: #8b93a7; margin: 0 0 4px; }
+      input, select, button { font: inherit; }
+      input, select {
+        width: 100%; padding: 9px 11px; border-radius: 8px; border: 1px solid #2b3441;
+        background: #0e1116; color: #e6e9ef; margin-bottom: 12px;
+      }
+      button {
+        cursor: pointer; border: 0; border-radius: 8px; padding: 9px 16px; font-weight: 600;
+        background: #2f6fed; color: #fff;
+      }
+      button:disabled { opacity: .5; cursor: not-allowed; }
+      button.ghost { background: transparent; border: 1px solid #2b3441; color: #e6e9ef; }
+      .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .pill { font-size: 11px; padding: 3px 9px; border-radius: 99px; border: 1px solid #2b3441; color: #8b93a7; }
+      .pill.ok { color: #57d38c; border-color: #1e4d33; background: #10251a; }
+      .pill.warn { color: #f0b429; border-color: #4d3a12; background: #241c0d; }
+      .err { color: #ff7b72; font-size: 13px; margin: 8px 0 0; }
+      .big { font-size: 28px; font-weight: 700; }
+      .muted { color: #8b93a7; font-size: 12px; }
+      .ranges button { background: transparent; border: 1px solid #2b3441; color: #8b93a7; padding: 5px 12px; }
+      .ranges button.active { background: #2f6fed; border-color: #2f6fed; color: #fff; }
+      svg { display: block; width: 100%; height: 160px; margin-top: 12px; }
+      .wsgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+      @media (max-width: 560px) { .wsgrid { grid-template-columns: 1fr; } }
+      .lineitem { display: flex; justify-content: space-between; gap: 12px; padding: 5px 0; border-bottom: 1px solid #1c232e; font-size: 14px; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel" data-presets="react">
+      const { useState, useEffect, useRef, useCallback } = React;
+      const RANGES = ['1d', '5d', '1m', '1y', 'max'];
+      // Landing + docs live in the separate website app. Change for production.
+      const WEBSITE_URL = 'http://localhost:4321';
+
+      async function api(path, opts) {
+        const res = await fetch(path, {
+          headers: { 'content-type': 'application/json' },
+          ...opts,
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+        return data;
+      }
+
+      function Sparkline({ points }) {
+        if (!points?.length) return <svg />;
+        const vals = points.map((p) => p.value);
+        const min = Math.min(...vals), max = Math.max(...vals);
+        const span = max - min || 1;
+        const W = 700, H = 160, pad = 6;
+        const d = points
+          .map((p, i) => {
+            const x = pad + (i / (points.length - 1)) * (W - pad * 2);
+            const y = pad + (1 - (p.value - min) / span) * (H - pad * 2);
+            return `${i === 0 ? 'M' : 'L'}${x.toFixed(1)},${y.toFixed(1)}`;
+          })
+          .join(' ');
+        const up = vals[vals.length - 1] >= vals[0];
+        const color = up ? '#57d38c' : '#ff7b72';
+        return (
+          <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none">
+            <path d={d} fill="none" stroke={color} strokeWidth="2" />
+          </svg>
+        );
+      }
+
+      const eur = (n) =>
+        n == null || isNaN(Number(n))
+          ? '—'
+          : Number(n).toLocaleString('en', { style: 'currency', currency: 'EUR' });
+
+      // compactPortfolioByType returns { categories: [{ categoryType, positions }] }.
+      // Flatten to a single list, tagging each position with its category.
+      function findPositions(state) {
+        const p = state.portfolio;
+        if (Array.isArray(p?.categories)) {
+          return p.categories.flatMap((c) =>
+            (c.positions ?? []).map((pos) => ({ ...pos, categoryType: c.categoryType })),
+          );
+        }
+        // Fallbacks for other shapes.
+        if (Array.isArray(p?.positions)) return p.positions;
+        for (const v of Object.values(state)) {
+          if (Array.isArray(v?.positions)) return v.positions;
+        }
+        return [];
+      }
+      const posName = (p) => p.name ?? p.instrumentId ?? p.isin ?? p.id ?? '?';
+      const posSize = (p) => p.netSize ?? p.size ?? p.quantity ?? p.netQuantity;
+      const posValue = (p) => p.netValue ?? p.value ?? p.marketValue ?? p.currentValue;
+      const netValue = (state) =>
+        state.portfolioFull?.netValue ?? state.portfolio?.netValue ?? state.portfolioFull?.totalValue;
+
+      function WsPanels({ ws }) {
+        const s = ws.state ?? {};
+        const positions = findPositions(s);
+        const cash = Array.isArray(s.cash) ? s.cash : s.cash?.cash ?? [];
+        const events = s.timeline?.items ?? s.timeline?.data ?? s.timeline?.events ?? [];
+        const errs = Object.entries(ws.errors ?? {});
+        const nv = netValue(s);
+        return (
+          <div className="card">
+            <div className="row" style={{ justifyContent: 'space-between', marginBottom: 8 }}>
+              <strong>Live WebSocket data</strong>
+              <span className="muted">topics: {(ws.topics ?? []).join(', ') || '—'}</span>
+            </div>
+
+            {errs.length > 0 &&
+              errs.map(([topic, e]) => (
+                <p key={topic} className="err">⚠ {topic}: {typeof e === 'string' ? e : JSON.stringify(e)}</p>
+              ))}
+
+            <div className="wsgrid">
+              <section>
+                <div className="muted">Cash · availableCash</div>
+                {cash.length ? (
+                  cash.map((c, i) => (
+                    <div key={i} className="lineitem">
+                      <span>{c.currencyId ?? c.currency ?? 'EUR'}</span>
+                      <span>{eur(c.amount ?? c.value)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="muted">waiting for frame…</div>
+                )}
+              </section>
+
+              <section>
+                <div className="muted">
+                  Investments · compactPortfolioByType{nv != null ? ` · ${eur(nv)}` : ''}
+                </div>
+                {positions.length ? (
+                  positions.slice(0, 10).map((p, i) => (
+                    <div key={i} className="lineitem">
+                      <span>
+                        {posName(p)}
+                        {p.categoryType ? <span className="muted"> · {p.categoryType}</span> : null}
+                      </span>
+                      <span>{posValue(p) != null ? eur(posValue(p)) : `×${posSize(p) ?? '?'}`}</span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="muted">no positions in frame — check server logs for the raw shape</div>
+                )}
+              </section>
+            </div>
+
+            <div className="muted" style={{ marginTop: 14 }}>
+              Timeline · timelineTransactions{events.length ? ` · ${events.length} events` : ''}
+            </div>
+            {events.length ? (
+              <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                {events.map((e, i) => (
+                  <div key={e.id ?? i} className="lineitem">
+                    <span>{e.title ?? e.eventType ?? e.type}</span>
+                    <span className="muted">{e.subtitle ?? ''}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="muted">waiting for frame…</div>
+            )}
+          </div>
+        );
+      }
+
+      function App() {
+        const [status, setStatus] = useState(null);
+        const [phase, setPhase] = useState('loading'); // loading|login|verify|ready
+        const [phone, setPhone] = useState('');
+        const [pin, setPin] = useState('');
+        const [processId, setProcessId] = useState(null);
+        const [code, setCode] = useState('');
+        const [range, setRange] = useState('1d');
+        const [chart, setChart] = useState(null);
+        const [ws, setWs] = useState(null);
+        const [err, setErr] = useState(null);
+        const [busy, setBusy] = useState(false);
+        const timer = useRef(null);
+
+        const refreshStatus = useCallback(async () => {
+          const s = await api('/api/status');
+          setStatus(s);
+          setPhase((p) => (s.loggedIn ? 'ready' : p === 'loading' ? 'login' : p));
+          return s;
+        }, []);
+
+        useEffect(() => { refreshStatus().catch((e) => setErr(e.message)); }, [refreshStatus]);
+
+        const loadChart = useCallback(async (r) => {
+          try {
+            const data = await api(`/api/chart?range=${r}`);
+            setChart(data);
+            setErr(null);
+          } catch (e) {
+            setErr(e.message);
+          }
+        }, []);
+
+        const loadWs = useCallback(async () => {
+          try {
+            setWs(await api('/api/ws'));
+          } catch (e) {
+            /* WS may still be connecting right after login */
+          }
+        }, []);
+
+        // Poll while ready — demonstrates the persistent, session-refreshing loop.
+        useEffect(() => {
+          if (phase !== 'ready') return;
+          loadChart(range);
+          loadWs();
+          timer.current = setInterval(async () => {
+            await refreshStatus();
+            loadChart(range);
+            loadWs();
+          }, 5000);
+          return () => clearInterval(timer.current);
+        }, [phase, range, loadChart, loadWs, refreshStatus]);
+
+        async function doLogin(e) {
+          e.preventDefault(); setBusy(true); setErr(null);
+          try {
+            const r = await api('/api/login', {
+              method: 'POST', body: JSON.stringify({ phoneNumber: phone, pin }),
+            });
+            setProcessId(r.processId);
+            setPhase('verify');
+          } catch (e) { setErr(e.message); } finally { setBusy(false); }
+        }
+
+        async function doVerify(e) {
+          e.preventDefault(); setBusy(true); setErr(null);
+          try {
+            await api('/api/verify', {
+              method: 'POST', body: JSON.stringify({ processId, code }),
+            });
+            await refreshStatus();
+            setPhase('ready');
+          } catch (e) { setErr(e.message); } finally { setBusy(false); }
+        }
+
+        const points = chart?.aggregates ?? chart?.snapshots ?? [];
+        const last = points[points.length - 1]?.value;
+        const first = points[0]?.value;
+        const delta = last != null && first != null ? ((last - first) / first) * 100 : null;
+        const ttlSec = status ? Math.round(status.sessionTtlMs / 1000) : 0;
+
+        return (
+          <div className="app">
+            <h1>Trade Republic API — Live Demo</h1>
+            <p className="sub">
+              {/* The website (landing + docs) is a separate app; update WEBSITE_URL for prod. */}
+              <a href={WEBSITE_URL}>← Home</a> · React front-end → Node proxy →
+              Trade Republic. See the{' '}
+              <a href={`${WEBSITE_URL}/api.html`}>API reference (Scalar)</a> ·{' '}
+              <a href={`${WEBSITE_URL}/docs.html`}>guide (markdown)</a>.
+            </p>
+
+            {status && (
+              <div className="row" style={{ marginBottom: 18 }}>
+                <span className={`pill ${status.mode === 'demo' ? 'warn' : 'ok'}`}>
+                  {status.mode === 'demo' ? 'DEMO / mock data' : 'REAL API'}
+                </span>
+                <span className={`pill ${status.wafReady ? 'ok' : ''}`}>
+                  WAF {status.wafReady ? 'ready' : 'pending'}
+                </span>
+                <span className={`pill ${ttlSec > 60 ? 'ok' : 'warn'}`}>
+                  session {ttlSec}s
+                </span>
+                <span className={`pill ${status.wsConnected ? 'ok' : 'warn'}`}>
+                  WebSocket {status.wsConnected ? 'live' : 'connecting'}
+                </span>
+                {status.secAccNo && <span className="pill">secAcc {status.secAccNo}</span>}
+              </div>
+            )}
+
+            {phase === 'login' && (
+              <form className="card" onSubmit={doLogin}>
+                <label>Phone number</label>
+                <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+33…" />
+                <label>PIN</label>
+                <input value={pin} onChange={(e) => setPin(e.target.value)} type="password" placeholder="••••" />
+                <button disabled={busy}>{busy ? 'Contacting TR…' : 'Log in'}</button>
+                <p className="muted" style={{ marginTop: 10 }}>
+                  Server solves the WAF challenge in headless Chromium, then starts login.
+                </p>
+              </form>
+            )}
+
+            {phase === 'verify' && (
+              <form className="card" onSubmit={doVerify}>
+                <label>2FA code (app push / SMS)</label>
+                <input value={code} onChange={(e) => setCode(e.target.value)} placeholder="1234" />
+                <button disabled={busy}>{busy ? 'Verifying…' : 'Verify'}</button>
+              </form>
+            )}
+
+            {phase === 'ready' && (
+              <div className="card">
+                <div className="row" style={{ justifyContent: 'space-between' }}>
+                  <div>
+                    <div className="big">
+                      {last != null ? last.toLocaleString('en', { style: 'currency', currency: 'EUR' }) : '—'}
+                    </div>
+                    <div className="muted" style={{ color: delta >= 0 ? '#57d38c' : '#ff7b72' }}>
+                      {delta != null ? `${delta >= 0 ? '+' : ''}${delta.toFixed(2)}% · ${range}` : ''}
+                    </div>
+                  </div>
+                  <div className="row ranges">
+                    {RANGES.map((r) => (
+                      <button key={r} className={r === range ? 'active' : ''} onClick={() => setRange(r)}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <Sparkline points={points} />
+                <p className="muted" style={{ marginTop: 12 }}>
+                  Auto-refreshing every 5s · {points.length} points · session kept alive by the proxy.
+                </p>
+              </div>
+            )}
+
+            {phase === 'ready' && ws && <WsPanels ws={ws} />}
+
+            {err && <p className="err">⚠ {err}</p>}
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+  </body>
+</html>

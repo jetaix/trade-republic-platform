@@ -1,0 +1,247 @@
+openapi: 3.1.0
+info:
+  title: Trade Republic — Unofficial API
+  version: 0.1.0
+  summary: Reverse-engineered REST surface of the Trade Republic web app.
+  description: |
+    **Unofficial.** Reverse-engineered from `app.traderepublic.com`, the mobile
+    app, and the community projects [pytr](https://github.com/pytr-org/pytr) and
+    [TradeRepublicApi](https://github.com/Zarathustra2/TradeRepublicApi). Trade
+    Republic publishes no API; endpoints and auth can change without notice.
+
+    ## Authentication (the hard part)
+
+    Three artifacts on three clocks must all be valid:
+
+    1. **`tr_session`** — an ES256 JWT delivered as a cookie, **expiring every
+       300 s**. Refresh it via `GET /api/v1/auth/web/session`.
+    2. **AWS WAF token** — the solution to a browser JS challenge, sent as both
+       the `aws-waf-token` cookie and the `x-aws-waf-token` header. It cannot be
+       minted over plain HTTP; produce it with a headless browser.
+    3. **2FA** — initial login needs a 4-digit code (app push / SMS), so the
+       first login is human-gated.
+
+    Flow: `solve WAF` → `POST /api/v1/auth/web/login` → enter 2FA at
+    `POST /api/v1/auth/web/login/{processId}/{code}` → loop
+    `GET /api/v1/auth/web/session` every <300 s → call data endpoints.
+
+    ## WebSocket data plane (not expressible in OpenAPI)
+
+    Most data flows over `wss://api.traderepublic.com/` using a line protocol:
+    `connect 31 {json}` → `connected`, then `sub {id} {"type":"...", ...}`.
+    Responses are `A` (full snapshot), `D` (a tab-separated **text diff** over
+    the previous raw payload string — not JSON Patch), `C` (closed), `E` (error).
+    Read-only topics: `portfolio`, `compactPortfolio`, `cash`, `availableCash`,
+    `portfolioAggregateHistory`, `timelineTransactions`, `ticker`, `instrument`.
+    See the repo README for the full topic catalogue.
+  license:
+    name: Documentation only — no affiliation with Trade Republic Bank GmbH
+
+servers:
+  - url: https://api.traderepublic.com
+    description: Production
+
+tags:
+  - name: Authentication
+    description: Login, 2FA, and the 5-minute session refresh.
+  - name: Account
+    description: Account settings and metadata.
+  - name: Portfolio
+    description: Portfolio valuation over time.
+
+security:
+  - sessionCookie: []
+    wafToken: []
+
+paths:
+  /api/v1/auth/web/login:
+    post:
+      operationId: startLogin
+      tags: [Authentication]
+      summary: Start web login
+      description: Begins the login flow and triggers a 2FA challenge. Requires a valid WAF token but no session yet.
+      security:
+        - wafToken: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+            example: { phoneNumber: "+33123456789", pin: "1234" }
+      responses:
+        '200':
+          description: Login started; a 2FA code was dispatched.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+              example: { processId: "b1c2…", "2fa": "APP", countdownInSeconds: 60 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/WafChallenge' }
+
+  /api/v1/auth/web/login/{processId}/{code}:
+    post:
+      operationId: verifyLogin
+      tags: [Authentication]
+      summary: Complete login with the 2FA code
+      description: Verifies the 4-digit code. On success the response sets the `tr_session` / `tr_claims` cookies.
+      security:
+        - wafToken: []
+      parameters:
+        - { name: processId, in: path, required: true, schema: { type: string }, description: The id returned by startLogin. }
+        - { name: code, in: path, required: true, schema: { type: string, pattern: '^[0-9]{4}$' }, description: The 4-digit 2FA code. }
+      responses:
+        '200':
+          description: Logged in. Session cookies are set.
+          headers:
+            Set-Cookie:
+              description: Sets `tr_session` (300s JWT) and `tr_claims`.
+              schema: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/WafChallenge' }
+
+  /api/v1/auth/web/login/{processId}/resend:
+    post:
+      operationId: resendCode
+      tags: [Authentication]
+      summary: Resend the 2FA code
+      security:
+        - wafToken: []
+      parameters:
+        - { name: processId, in: path, required: true, schema: { type: string } }
+      responses:
+        '200': { description: A new code was dispatched. }
+        '403': { $ref: '#/components/responses/WafChallenge' }
+
+  /api/v1/auth/web/session:
+    get:
+      operationId: refreshSession
+      tags: [Authentication]
+      summary: Refresh the session
+      description: |
+        Rotates the short-lived `tr_session` JWT. Call before the 300s expiry
+        (a 60s safety margin is recommended). This is the heartbeat that keeps a
+        persistent client alive without repeating 2FA.
+      responses:
+        '200':
+          description: A fresh `tr_session` cookie is set.
+          headers:
+            Set-Cookie:
+              description: New `tr_session` JWT.
+              schema: { type: string }
+        '401':
+          description: Session dead — full re-login (2FA) required.
+        '403': { $ref: '#/components/responses/WafChallenge' }
+
+  /api/v2/auth/account:
+    get:
+      operationId: getAccount
+      tags: [Account]
+      summary: Account settings
+      responses:
+        '200':
+          description: Account settings and metadata.
+          content:
+            application/json:
+              schema: { type: object, additionalProperties: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /api-gateway/portfolio-chart/v2/chart:
+    get:
+      operationId: getPortfolioChart
+      tags: [Portfolio]
+      summary: Portfolio value time series
+      description: |
+        Returns the portfolio value chart for a securities account. `secAccNo` is
+        the `sec` account number embedded in the session JWT
+        (`act.acc.owner.default.sec[0]`).
+      parameters:
+        - name: secAccNo
+          in: query
+          required: true
+          schema: { type: string }
+          description: Securities account number (from the session JWT).
+          example: "0384048802"
+        - name: range
+          in: query
+          required: true
+          schema: { type: string, enum: ["1d", "5d", "1m", "3m", "1y", "max"] }
+          example: "1d"
+        - name: currency
+          in: query
+          required: false
+          schema: { type: string, default: "EUR" }
+          example: "EUR"
+      responses:
+        '200':
+          description: Chart series.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChartResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/WafChallenge' }
+
+components:
+  securitySchemes:
+    sessionCookie:
+      type: apiKey
+      in: cookie
+      name: tr_session
+      description: ES256 JWT session cookie, valid for 300s. Rotated via /api/v1/auth/web/session.
+    wafToken:
+      type: apiKey
+      in: header
+      name: x-aws-waf-token
+      description: AWS WAF challenge token. Must also be present as the `aws-waf-token` cookie.
+
+  responses:
+    Unauthorized:
+      description: Missing/expired session. Refresh via /api/v1/auth/web/session or re-login.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    WafChallenge:
+      description: AWS WAF challenge. Re-solve the WAF token with a headless browser.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [phoneNumber, pin]
+      properties:
+        phoneNumber: { type: string, description: E.164 phone number., example: "+33123456789" }
+        pin: { type: string, description: Account PIN., example: "1234" }
+    LoginResponse:
+      type: object
+      properties:
+        processId: { type: string }
+        "2fa": { type: string, enum: ["APP", "SMS"], description: Delivery channel for the code. }
+        countdownInSeconds: { type: integer, description: Seconds until a resend is allowed. }
+    ChartResponse:
+      type: object
+      description: |
+        Real response shape observed from `portfolio-chart/v2`. Numeric values are
+        strings. The time-series lives under `points`; each point carries the
+        portfolio `netValue` at that `timestamp`.
+      properties:
+        openingTime: { type: integer, format: int64, description: Epoch millis. }
+        expectedClosingTime: { type: integer, format: int64, description: Epoch millis. }
+        currency: { type: string, example: "EUR" }
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              timestamp: { type: integer, format: int64, description: Epoch millis. }
+              netValue: { type: string, description: Portfolio value at this point (stringified number)., example: "16.41" }
+              performance:
+                type: object
+                properties:
+                  relativeValue: { type: string, example: "0.0027" }
+                  absoluteValue: { type: string, example: "0.05" }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+        code: { type: string, description: "e.g. WAF, REAUTH" }

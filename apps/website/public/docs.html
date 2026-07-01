@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trade Republic API — Documentation</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+      :root { color-scheme: light dark; }
+      body {
+        margin: 0; background: #0e1116; color: #e6e9ef;
+        font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      }
+      .wrap { max-width: 900px; margin: 0 auto; padding: 32px 24px 96px; }
+      .topbar { display: flex; gap: 16px; align-items: center; margin-bottom: 24px; }
+      .topbar a { color: #6ea8fe; text-decoration: none; font-size: 14px; }
+      h1 { font-size: 30px; }
+      h2 { margin-top: 40px; border-bottom: 1px solid #232a35; padding-bottom: 6px; }
+      h3 { margin-top: 28px; }
+      a { color: #6ea8fe; }
+      code { background: #1b212b; padding: 2px 6px; border-radius: 5px; font-size: 13.5px; }
+      pre { background: #161b22; border: 1px solid #232a35; border-radius: 10px; padding: 16px; overflow: auto; }
+      pre code { background: none; padding: 0; }
+      table { border-collapse: collapse; width: 100%; margin: 12px 0; font-size: 14px; }
+      th, td { border: 1px solid #232a35; padding: 7px 10px; text-align: left; vertical-align: top; }
+      th { background: #161b22; }
+      blockquote { border-left: 3px solid #2f6fed; margin: 16px 0; padding: 4px 16px; color: #b8c0d0; background: #12161d; }
+      .loading { color: #8b93a7; }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <div class="topbar">
+        <a href="/">← Home</a>
+        <a href="http://localhost:5175/demo.html">Live demo</a>
+        <a href="/api.html">API reference (Scalar)</a>
+        <a href="https://github.com/pytr-org/pytr" target="_blank" rel="noopener">pytr</a>
+      </div>
+      <div id="doc" class="loading">Loading documentation…</div>
+    </div>
+    <script>
+      fetch('/docs.md')
+        .then((r) => (r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status))))
+        .then((md) => {
+          document.getElementById('doc').className = '';
+          document.getElementById('doc').innerHTML = marked.parse(md);
+        })
+        .catch((e) => {
+          document.getElementById('doc').textContent =
+            'Could not load /docs.md (' + e.message + '). Serve via the demo server.';
+        });
+    </script>
+  </body>
+</html>

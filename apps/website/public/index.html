@@ -1,0 +1,772 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Trade Republic API &amp; MCP — Talk to your portfolio</title>
+    <meta
+      name="description"
+      content="Wire your Trade Republic portfolio into Claude. A documented, read-only API and a Model Context Protocol server that let an AI agent read your holdings, cash and transactions — running entirely on your machine."
+    />
+    <meta name="theme-color" content="#0f0f0f" />
+    <style>
+      /* ─────────────────────────  Fonts  ───────────────────────── */
+      @font-face {
+        font-family: 'TR Sans Display';
+        font-weight: 500;
+        font-display: swap;
+        src: url('/fonts/TradeRepublicSans-Display-500.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'TR Sans Display';
+        font-weight: 580;
+        font-display: swap;
+        src: url('/fonts/TradeRepublicSans-Display-580.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'TR Sans Display';
+        font-weight: 680;
+        font-display: swap;
+        src: url('/fonts/TradeRepublicSans-Display-680.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'TR Sans Display';
+        font-weight: 740;
+        font-display: swap;
+        src: url('/fonts/TradeRepublicSans-Display-740.woff2') format('woff2');
+      }
+
+      /* ─────────────────────────  Tokens  ───────────────────────── */
+      :root {
+        --ink: #0f0f0f;
+        --black: #000000;
+        --paper: #f6f7f9;
+        --paper-2: #eceef2;
+        --white: #ffffff;
+        --red: #ff4034;
+        --red-ink: #e5352a;
+        --muted: #676a70;
+        --muted-2: #8c939c;
+        --soft: #bcc2ca;
+        --line: #e4e7ec;
+        --line-2: #eceef2;
+
+        /* dark surfaces */
+        --d-bg: #0f0f0f;
+        --d-panel: #17191d;
+        --d-panel-2: #1d2025;
+        --d-line: rgba(255, 255, 255, 0.1);
+        --d-line-2: rgba(255, 255, 255, 0.16);
+        --d-text: #f0f3f7;
+        --d-muted: #9aa1ac;
+
+        --sans: 'TR Sans Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, sans-serif;
+        --mono: 'SFMono-Regular', ui-monospace, Menlo, 'Cascadia Code', monospace;
+
+        --r-sm: 10px;
+        --r: 16px;
+        --r-lg: 24px;
+        --maxw: 1180px;
+
+        --ease: cubic-bezier(0.22, 1, 0.36, 1);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font-family: var(--sans);
+        font-weight: 500;
+        font-size: 17px;
+        line-height: 1.55;
+        letter-spacing: -0.01em;
+        overflow-x: hidden;
+      }
+      a { color: inherit; text-decoration: none; }
+      ::selection { background: var(--red); color: #fff; }
+
+      .wrap { width: 100%; max-width: var(--maxw); margin: 0 auto; padding: 0 28px; }
+
+      h1, h2, h3 { margin: 0; font-weight: 740; letter-spacing: -0.035em; line-height: 1.02; }
+
+      /* highlight — the Trade Republic signature swipe */
+      .hl { position: relative; white-space: nowrap; color: var(--red); }
+      .hl::after {
+        content: '';
+        position: absolute;
+        left: -0.04em; right: -0.04em; bottom: 0.06em;
+        height: 0.09em;
+        background: var(--red);
+        border-radius: 99px;
+        transform: scaleX(0);
+        transform-origin: left center;
+        animation: swipe 0.9s var(--ease) forwards;
+        animation-delay: 0.75s;
+      }
+      @keyframes swipe { to { transform: scaleX(1); } }
+
+      /* ─────────────────────────  Nav  ───────────────────────── */
+      nav {
+        position: sticky; top: 0; z-index: 100;
+        background: rgba(246, 247, 249, 0.72);
+        backdrop-filter: saturate(180%) blur(16px);
+        -webkit-backdrop-filter: saturate(180%) blur(16px);
+        border-bottom: 1px solid transparent;
+        transition: border-color 0.3s, background 0.3s;
+      }
+      nav.scrolled { border-bottom-color: var(--line); background: rgba(246, 247, 249, 0.9); }
+      nav .wrap { display: flex; align-items: center; gap: 26px; height: 66px; }
+      .brand { display: flex; align-items: center; gap: 11px; font-weight: 680; font-size: 17px; letter-spacing: -0.03em; margin-right: auto; white-space: nowrap; }
+      .brand .mark {
+        width: 26px; height: 26px; border-radius: 7px; flex: none;
+        background: var(--ink); position: relative;
+        display: grid; place-items: center;
+      }
+      .brand .mark::before { content: ''; width: 9px; height: 9px; border-radius: 2.5px; background: var(--red); }
+      .nav-links { display: flex; align-items: center; gap: 26px; }
+      .nav-links a { color: var(--muted); font-size: 15px; font-weight: 580; transition: color 0.2s; }
+      .nav-links a:hover { color: var(--ink); }
+      .btn {
+        display: inline-flex; align-items: center; gap: 8px;
+        font-family: var(--sans); font-weight: 680; font-size: 15px; letter-spacing: -0.01em;
+        padding: 11px 20px; border-radius: 99px; border: 1px solid var(--ink);
+        background: var(--ink); color: #fff; cursor: pointer;
+        transition: transform 0.2s var(--ease), background 0.2s, color 0.2s, border-color 0.2s;
+      }
+      .btn:hover { transform: translateY(-1px); background: #000; }
+      .btn.ghost { background: transparent; color: var(--ink); border-color: var(--line); }
+      .btn.ghost:hover { border-color: var(--ink); }
+      .btn.red { background: var(--red); border-color: var(--red); }
+      .btn.red:hover { background: var(--red-ink); border-color: var(--red-ink); }
+      .btn.lg { padding: 15px 28px; font-size: 16.5px; }
+      .btn .arr { transition: transform 0.25s var(--ease); }
+      .btn:hover .arr { transform: translateX(3px); }
+      @media (max-width: 860px) {
+        .nav-links a:not(.btn) { display: none; }
+        nav .wrap { gap: 12px; }
+        .nav-links .btn { padding: 9px 15px; font-size: 14px; }
+      }
+      @media (max-width: 420px) { .brand .suffix { display: none; } }
+
+      /* ─────────────────────────  Hero  ───────────────────────── */
+      .hero { padding: 92px 0 40px; position: relative; }
+      .eyebrow {
+        display: inline-flex; align-items: center; gap: 9px;
+        font-size: 13px; font-weight: 580; letter-spacing: 0.01em; color: var(--muted);
+        border: 1px solid var(--line); background: var(--white);
+        padding: 7px 14px 7px 12px; border-radius: 99px; margin-bottom: 30px;
+      }
+      .eyebrow .pdot { width: 7px; height: 7px; border-radius: 99px; background: var(--red); box-shadow: 0 0 0 0 rgba(255, 64, 52, 0.5); animation: pulse 2.4s infinite; }
+      @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 64, 52, 0.5); } 70% { box-shadow: 0 0 0 7px rgba(255, 64, 52, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 64, 52, 0); } }
+      .hero h1 { font-size: clamp(2.9rem, 7.4vw, 5.7rem); max-width: 15ch; }
+      .hero p.sub {
+        margin: 26px 0 0; font-size: clamp(1.05rem, 1.6vw, 1.32rem);
+        color: var(--muted); font-weight: 500; max-width: 44ch; line-height: 1.5;
+      }
+      .hero .cta-row { margin-top: 38px; display: flex; gap: 12px; flex-wrap: wrap; }
+      .hero .assurance { margin-top: 22px; display: flex; gap: 22px; flex-wrap: wrap; font-size: 13.5px; color: var(--muted-2); font-weight: 580; }
+      .hero .assurance span { display: inline-flex; align-items: center; gap: 7px; }
+      .hero .assurance b { color: var(--ink); font-weight: 680; }
+      .chk { width: 15px; height: 15px; flex: none; color: var(--red); }
+
+      /* rise-in load animation */
+      .rise { opacity: 0; transform: translateY(16px); animation: rise 0.85s var(--ease) forwards; }
+      @keyframes rise { to { opacity: 1; transform: none; } }
+      .d1 { animation-delay: 0.05s; } .d2 { animation-delay: 0.15s; }
+      .d3 { animation-delay: 0.25s; } .d4 { animation-delay: 0.35s; } .d5 { animation-delay: 0.45s; }
+
+      /* ─────────────  COMMAND: the conversational demo (dark)  ───────────── */
+      .command {
+        margin-top: 68px; background: var(--d-bg); color: var(--d-text);
+        border-radius: var(--r-lg); overflow: hidden; position: relative;
+        border: 1px solid var(--ink);
+        box-shadow: 0 40px 90px -50px rgba(15, 15, 15, 0.55);
+      }
+      .command::before {
+        content: ''; position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(80% 120% at 82% -10%, rgba(255, 64, 52, 0.16), transparent 55%);
+      }
+      .command-inner { position: relative; padding: 30px clamp(20px, 4vw, 46px) 40px; }
+      .command-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+      .command-head .tt { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 580; color: var(--d-muted); letter-spacing: 0.02em; text-transform: uppercase; }
+      .command-head .tt .sq { width: 8px; height: 8px; border-radius: 2px; background: var(--red); }
+      .chips { display: flex; gap: 9px; flex-wrap: wrap; }
+      .chip {
+        font-family: var(--sans); font-weight: 580; font-size: 13.5px; color: var(--d-muted);
+        background: var(--d-panel); border: 1px solid var(--d-line);
+        padding: 8px 15px; border-radius: 99px; cursor: pointer;
+        transition: all 0.22s var(--ease); white-space: nowrap;
+      }
+      .chip:hover { color: var(--d-text); border-color: var(--d-line-2); }
+      .chip.on { background: var(--red); border-color: var(--red); color: #fff; }
+
+      .thread { min-height: 318px; }
+      .conv { display: none; }
+      .conv.show { display: block; }
+      .msg { display: flex; gap: 13px; margin-bottom: 16px; opacity: 0; transform: translateY(10px); }
+      .conv.show .msg { animation: msgin 0.5s var(--ease) forwards; }
+      .conv.show .msg:nth-child(1) { animation-delay: 0.04s; }
+      .conv.show .msg:nth-child(2) { animation-delay: 0.34s; }
+      .conv.show .msg:nth-child(3) { animation-delay: 0.62s; }
+      @keyframes msgin { to { opacity: 1; transform: none; } }
+      .ava { width: 32px; height: 32px; border-radius: 9px; flex: none; display: grid; place-items: center; font-weight: 680; font-size: 13px; }
+      .ava.user { background: var(--d-panel-2); color: var(--d-muted); border: 1px solid var(--d-line); }
+      .ava.ai { background: var(--red); color: #fff; }
+      .bubble { max-width: 640px; }
+      .bubble .who { font-size: 12px; font-weight: 580; color: var(--d-muted); margin-bottom: 5px; letter-spacing: 0.02em; }
+      .bubble .txt { font-size: 16px; font-weight: 500; color: var(--d-text); line-height: 1.5; }
+      .bubble .txt b { font-weight: 680; }
+      .bubble .txt .pos { color: var(--red); font-weight: 680; }
+
+      /* data card inside a reply */
+      .dcard { margin-top: 13px; background: var(--d-panel); border: 1px solid var(--d-line); border-radius: 14px; padding: 17px 18px; }
+      .dcard .row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--d-line); }
+      .dcard .row:last-child { border-bottom: 0; }
+      .dcard .row:first-child { padding-top: 0; }
+      .dcard .k { display: flex; align-items: center; gap: 10px; font-size: 14.5px; font-weight: 580; color: var(--d-text); }
+      .dcard .tk { width: 26px; height: 26px; border-radius: 7px; background: var(--d-panel-2); border: 1px solid var(--d-line); display: grid; place-items: center; font-size: 11px; font-weight: 680; color: var(--d-muted); }
+      .dcard .v { font-size: 14.5px; font-weight: 680; color: var(--d-text); font-variant-numeric: tabular-nums; }
+      .dcard .sub { font-size: 12.5px; color: var(--d-muted); font-weight: 500; }
+      .up { color: #4ade80 !important; } .down { color: #ff6b6b !important; }
+
+      /* big value + sparkline */
+      .valcard { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; }
+      .valcard .big { font-size: 30px; font-weight: 740; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+      .valcard .delta { font-size: 13.5px; font-weight: 680; color: #4ade80; margin-top: 3px; }
+      .spark { width: 168px; height: 54px; flex: none; }
+      .spark path.line { fill: none; stroke: var(--red); stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+      .spark path.fill { fill: url(#sg); opacity: 0.5; }
+
+      /* ─────────────────────────  Sections  ───────────────────────── */
+      section { padding: 108px 0; }
+      .kicker { font-size: 13px; font-weight: 680; letter-spacing: 0.06em; text-transform: uppercase; color: var(--red); margin-bottom: 16px; }
+      .sec-head { max-width: 30ch; }
+      .sec-head h2 { font-size: clamp(2rem, 4.4vw, 3.35rem); }
+      .sec-head p { margin: 20px 0 0; color: var(--muted); font-size: 1.15rem; font-weight: 500; max-width: 52ch; }
+
+      /* reveal on scroll */
+      .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.8s var(--ease), transform 0.8s var(--ease); }
+      .reveal.in { opacity: 1; transform: none; }
+
+      /* capabilities grid */
+      .caps { margin-top: 58px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+      @media (max-width: 900px) { .caps { grid-template-columns: 1fr; } }
+      .cap {
+        background: var(--white); border: 1px solid var(--line); border-radius: var(--r-lg);
+        padding: 26px 26px 0; overflow: hidden; transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease), border-color 0.35s;
+      }
+      .cap:hover { transform: translateY(-4px); box-shadow: 0 30px 60px -40px rgba(15, 15, 15, 0.3); border-color: var(--soft); }
+      .cap .num { font-size: 12px; font-weight: 680; color: var(--muted-2); letter-spacing: 0.04em; }
+      .cap h3 { font-size: 1.4rem; margin: 12px 0 8px; letter-spacing: -0.03em; }
+      .cap p { color: var(--muted); font-size: 15.5px; font-weight: 500; margin: 0 0 22px; }
+      .cap.wide { grid-column: span 3; display: grid; grid-template-columns: 1.1fr 1fr; gap: 20px; align-items: center; padding: 40px; }
+      @media (max-width: 900px) { .cap.wide { grid-column: span 1; grid-template-columns: 1fr; } }
+
+      /* mini UI previews */
+      .mini { background: var(--paper); border: 1px solid var(--line); border-radius: 14px 14px 0 0; border-bottom: 0; padding: 16px; margin: 0 -1px -1px; }
+      .cap.wide .mini { border-radius: 14px; border-bottom: 1px solid var(--line); margin: 0; }
+      .mrow { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line-2); font-size: 13.5px; }
+      .mrow:last-child { border-bottom: 0; }
+      .mrow .name { display: flex; align-items: center; gap: 9px; font-weight: 580; color: var(--ink); }
+      .mrow .badge { width: 22px; height: 22px; border-radius: 6px; background: var(--white); border: 1px solid var(--line); display: grid; place-items: center; font-size: 10px; font-weight: 680; color: var(--muted); }
+      .mrow .val { font-weight: 680; font-variant-numeric: tabular-nums; color: var(--ink); }
+      .mrow .g { color: #16a34a; font-weight: 680; font-size: 12.5px; }
+      .mrow .r { color: var(--red); font-weight: 680; font-size: 12.5px; }
+      .barwrap { display: flex; align-items: flex-end; gap: 7px; height: 96px; padding-top: 8px; }
+      .bar { flex: 1; background: var(--paper-2); border-radius: 5px 5px 0 0; position: relative; }
+      .bar.hot { background: var(--red); }
+      .cash-big { font-size: 26px; font-weight: 740; letter-spacing: -0.03em; }
+      .cash-sub { font-size: 12.5px; color: var(--muted); font-weight: 580; margin-top: 2px; }
+
+      /* the "everything" list */
+      .universe { background: var(--ink); color: var(--d-text); border-radius: var(--r-lg); padding: clamp(34px, 5vw, 62px); }
+      .universe h2 { font-size: clamp(1.9rem, 4vw, 3rem); max-width: 20ch; }
+      .universe .lead { color: var(--d-muted); margin: 18px 0 40px; font-size: 1.12rem; font-weight: 500; max-width: 50ch; }
+      .qgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; }
+      @media (max-width: 760px) { .qgrid { grid-template-columns: 1fr; } }
+      .q { display: flex; align-items: center; gap: 13px; padding: 13px 2px; border-top: 1px solid var(--d-line); font-size: 15.5px; font-weight: 500; color: var(--d-text); }
+      .q .arr2 { color: var(--red); font-weight: 680; flex: none; }
+      .q:hover .body { color: #fff; }
+      .q .body { color: #d6dae1; transition: color 0.2s; }
+
+      /* trust */
+      .trust-grid { margin-top: 56px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+      @media (max-width: 860px) { .trust-grid { grid-template-columns: 1fr; } }
+      .tcard { border: 1px solid var(--line); background: var(--white); border-radius: var(--r-lg); padding: 34px; }
+      .tcard .ic { width: 44px; height: 44px; border-radius: 12px; background: #fff; border: 1px solid var(--line); display: grid; place-items: center; color: var(--red); margin-bottom: 20px; }
+      .tcard h3 { font-size: 1.35rem; letter-spacing: -0.03em; }
+      .tcard p { color: var(--muted); font-size: 15.5px; margin: 12px 0 0; font-weight: 500; }
+      .tcard code { font-family: var(--mono); font-size: 13px; background: var(--paper-2); padding: 2px 6px; border-radius: 6px; color: var(--ink); }
+      .tcard .demo-line { margin-top: 20px; display: flex; align-items: center; gap: 10px; padding: 13px 15px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; font-size: 13.5px; font-weight: 580; }
+      .tcard .demo-line.ok { color: #16a34a; }
+      .tcard .demo-line .lock { color: var(--red); }
+
+      /* resources */
+      .res { margin-top: 52px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+      @media (max-width: 980px) { .res { grid-template-columns: 1fr 1fr; } }
+      @media (max-width: 560px) { .res { grid-template-columns: 1fr; } }
+      .rcard { background: var(--white); border: 1px solid var(--line); border-radius: var(--r); padding: 24px; display: flex; flex-direction: column; min-height: 190px; transition: transform 0.3s var(--ease), border-color 0.3s; }
+      .rcard:hover { transform: translateY(-4px); border-color: var(--ink); }
+      .rcard .rt { font-size: 12px; font-weight: 680; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted-2); }
+      .rcard h3 { font-size: 1.2rem; margin: 12px 0 8px; letter-spacing: -0.03em; }
+      .rcard p { color: var(--muted); font-size: 14.5px; margin: 0 0 18px; font-weight: 500; flex: 1; }
+      .rcard .go { font-size: 14.5px; font-weight: 680; color: var(--ink); display: inline-flex; align-items: center; gap: 6px; }
+      .rcard:hover .go { color: var(--red); }
+
+      /* code strip */
+      .install { margin-top: 52px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: stretch; }
+      @media (max-width: 860px) { .install { grid-template-columns: 1fr; } }
+      pre {
+        margin: 0; background: var(--ink); color: #e7eaf0; border-radius: var(--r);
+        padding: 22px 24px; overflow-x: auto; font-family: var(--mono);
+        font-size: 13.5px; line-height: 1.65; border: 1px solid var(--ink);
+      }
+      pre .c { color: #7f8794; } pre .r { color: #ff8079; } pre .g { color: #8be0a8; }
+      .install .side { background: var(--white); border: 1px solid var(--line); border-radius: var(--r); padding: 26px; }
+      .install .side h3 { font-size: 1.15rem; margin-bottom: 14px; letter-spacing: -0.03em; }
+      .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 16px; }
+      .steps li { display: flex; gap: 14px; align-items: flex-start; font-size: 14.5px; color: var(--muted); font-weight: 500; }
+      .steps li b { color: var(--ink); font-weight: 680; }
+      .steps li::before { counter-increment: s; content: counter(s); flex: none; width: 26px; height: 26px; border-radius: 8px; background: var(--ink); color: #fff; font-weight: 680; font-size: 13px; display: grid; place-items: center; }
+
+      /* final CTA */
+      .final { background: var(--d-bg); color: var(--d-text); border-radius: var(--r-lg); padding: clamp(48px, 8vw, 104px) 32px; text-align: center; position: relative; overflow: hidden; }
+      .final::before { content: ''; position: absolute; inset: 0; background: radial-gradient(70% 120% at 50% -20%, rgba(255, 64, 52, 0.2), transparent 60%); pointer-events: none; }
+      .final .inner { position: relative; }
+      .final h2 { font-size: clamp(2.1rem, 5.5vw, 4rem); max-width: 18ch; margin: 0 auto; }
+      .final p { color: var(--d-muted); font-size: 1.2rem; font-weight: 500; margin: 22px auto 38px; max-width: 46ch; }
+      .final .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+      .final .btn.ghost { color: #fff; border-color: var(--d-line-2); }
+      .final .btn.ghost:hover { border-color: #fff; }
+
+      /* footer */
+      footer { padding: 84px 0 64px; }
+      .fgrid { display: grid; grid-template-columns: 1.6fr repeat(3, 1fr); gap: 32px; padding-bottom: 40px; border-bottom: 1px solid var(--line); }
+      @media (max-width: 760px) { .fgrid { grid-template-columns: 1fr 1fr; } }
+      .fcol h4 { font-size: 12px; font-weight: 680; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted-2); margin: 0 0 16px; }
+      .fcol a { display: block; color: var(--muted); font-size: 14.5px; font-weight: 500; padding: 5px 0; transition: color 0.2s; }
+      .fcol a:hover { color: var(--ink); }
+      .fbrand { max-width: 30ch; }
+      .fbrand p { color: var(--muted); font-size: 14.5px; margin: 14px 0 0; font-weight: 500; }
+      .disc { margin-top: 32px; font-size: 12.5px; color: var(--muted-2); line-height: 1.6; max-width: 82ch; }
+      .disc b { color: var(--muted); font-weight: 680; }
+      .fbot { margin-top: 28px; display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted-2); font-weight: 580; }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 0.001s !important; transition-duration: 0.001s !important; }
+        .rise, .reveal { opacity: 1 !important; transform: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ───────────────────────── Nav ───────────────────────── -->
+    <nav id="nav">
+      <div class="wrap">
+        <a class="brand" href="/"><span class="mark"></span> Trade Republic <span class="suffix" style="color: var(--muted); font-weight: 580">API</span></a>
+        <div class="nav-links">
+          <a href="#command">Command</a>
+          <a href="#capabilities">Capabilities</a>
+          <a href="#security">Security</a>
+          <a href="/docs.html">Docs</a>
+          <a href="/api.html">Reference</a>
+          <a class="btn" href="#install">Connect the MCP <span class="arr">→</span></a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- ───────────────────────── Hero ───────────────────────── -->
+    <header class="hero">
+      <div class="wrap">
+        <span class="eyebrow rise d1"><span class="pdot"></span> Unofficial · read-only · runs on your machine</span>
+        <h1 class="rise d2">Talk to your <span class="hl">portfolio</span>.</h1>
+        <p class="sub rise d3">
+          An AI that reads your Trade Republic account end to end — holdings, cash and
+          transactions — through a Model Context Protocol server built to plug straight into Claude.
+        </p>
+        <div class="cta-row rise d4">
+          <a class="btn red lg" href="#install">Connect the MCP <span class="arr">→</span></a>
+          <a class="btn ghost lg" href="/api.html">Explore the API</a>
+        </div>
+        <div class="assurance rise d5">
+          <span><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg> <b>Read-only</b>&nbsp;— no trades, ever</span>
+          <span><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg> Credentials <b>never leave your device</b></span>
+          <span><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg> Log in <b>once</b></span>
+        </div>
+
+        <!-- ───────── Command: conversational demo ───────── -->
+        <div class="command rise d5" id="command">
+          <div class="command-inner">
+            <div class="command-head">
+              <div class="tt"><span class="sq"></span> Ask in plain English</div>
+              <div class="chips" id="chips">
+                <button class="chip on" data-i="0">Portfolio value</button>
+                <button class="chip" data-i="1">My positions</button>
+                <button class="chip" data-i="2">This year</button>
+                <button class="chip" data-i="3">Recent activity</button>
+                <button class="chip" data-i="4">Cash</button>
+              </div>
+            </div>
+
+            <div class="thread" id="thread">
+              <!-- Conversation 0 — portfolio value -->
+              <div class="conv show" data-c="0">
+                <div class="msg"><div class="ava user">You</div><div class="bubble"><div class="who">You</div><div class="txt">What's my portfolio worth right now?</div></div></div>
+                <div class="msg"><div class="ava ai">◆</div><div class="bubble"><div class="who">Claude · via Trade Republic MCP</div>
+                  <div class="txt">Your portfolio is worth <b>€48,213.90</b>, <span class="pos">up 2.4% today</span> (+€1,132.40).</div>
+                  <div class="dcard">
+                    <div class="valcard">
+                      <div><div class="big">€48,213.90</div><div class="delta">▲ +€1,132.40&nbsp;&nbsp;·&nbsp;&nbsp;1M +6.8%</div></div>
+                      <svg class="spark" viewBox="0 0 168 54" preserveAspectRatio="none">
+                        <defs><linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff4034" stop-opacity="0.35"/><stop offset="1" stop-color="#ff4034" stop-opacity="0"/></linearGradient></defs>
+                        <path class="fill" d="M0,40 L10,38 22,42 34,30 46,33 58,24 70,27 82,18 94,22 106,14 118,17 130,9 142,12 156,5 168,7 L168,54 L0,54 Z"/>
+                        <path class="line" d="M0,40 L10,38 22,42 34,30 46,33 58,24 70,27 82,18 94,22 106,14 118,17 130,9 142,12 156,5 168,7"/>
+                      </svg>
+                    </div>
+                  </div>
+                </div></div>
+              </div>
+
+              <!-- Conversation 1 — positions -->
+              <div class="conv" data-c="1">
+                <div class="msg"><div class="ava user">You</div><div class="bubble"><div class="who">You</div><div class="txt">List my positions, biggest first.</div></div></div>
+                <div class="msg"><div class="ava ai">◆</div><div class="bubble"><div class="who">Claude · via Trade Republic MCP</div>
+                  <div class="txt">You hold <b>6 positions</b> across ETFs, stocks and crypto:</div>
+                  <div class="dcard">
+                    <div class="row"><div class="k"><span class="tk">ETF</span> Core MSCI World</div><div class="v">€18,904 <span class="up">+0.6%</span></div></div>
+                    <div class="row"><div class="k"><span class="tk">AS</span> ASML Holding</div><div class="v">€12,040 <span class="up">+1.2%</span></div></div>
+                    <div class="row"><div class="k"><span class="tk">₿</span> Bitcoin</div><div class="v">€6,118 <span class="up">+3.1%</span></div></div>
+                    <div class="row"><div class="k"><span class="tk">TS</span> Tesla</div><div class="v">€4,321 <span class="down">−0.8%</span></div></div>
+                    <div class="row"><div class="k"><span class="tk">NV</span> Nvidia</div><div class="v">€3,910 <span class="up">+2.0%</span></div></div>
+                    <div class="row"><div class="k"><span class="tk">ETF</span> MSCI EM IMI</div><div class="v">€2,920 <span class="up">+0.3%</span></div></div>
+                  </div>
+                </div></div>
+              </div>
+
+              <!-- Conversation 2 — this year -->
+              <div class="conv" data-c="2">
+                <div class="msg"><div class="ava user">You</div><div class="bubble"><div class="who">You</div><div class="txt">How have I done this year?</div></div></div>
+                <div class="msg"><div class="ava ai">◆</div><div class="bubble"><div class="who">Claude · via Trade Republic MCP</div>
+                  <div class="txt">Year to date you're <span class="pos">up 14.2%</span> — a gain of <b>€5,981</b> on your invested capital.</div>
+                  <div class="dcard">
+                    <div class="row"><div class="k">Best performer</div><div class="v">Bitcoin <span class="up">+38.4%</span></div></div>
+                    <div class="row"><div class="k">Steadiest</div><div class="v">Core MSCI World <span class="up">+11.9%</span></div></div>
+                    <div class="row"><div class="k">Laggard</div><div class="v">Tesla <span class="down">−6.1%</span></div></div>
+                    <div class="row"><div class="k">Dividends received YTD</div><div class="v">€214.60</div></div>
+                  </div>
+                </div></div>
+              </div>
+
+              <!-- Conversation 3 — recent activity -->
+              <div class="conv" data-c="3">
+                <div class="msg"><div class="ava user">You</div><div class="bubble"><div class="who">You</div><div class="txt">Anything happen on my account this week?</div></div></div>
+                <div class="msg"><div class="ava ai">◆</div><div class="bubble"><div class="who">Claude · via Trade Republic MCP</div>
+                  <div class="txt">Three events on your timeline in the last 7 days:</div>
+                  <div class="dcard">
+                    <div class="row"><div class="k"><span class="tk">↺</span> Savings plan executed</div><div class="v">−€250.00 <span class="sub">→ MSCI World</span></div></div>
+                    <div class="row"><div class="k"><span class="tk">€</span> Dividend · ASML</div><div class="v up">+€38.20</div></div>
+                    <div class="row"><div class="k"><span class="tk">↑</span> Buy order · Nvidia</div><div class="v">−€500.00 <span class="sub">filled</span></div></div>
+                  </div>
+                </div></div>
+              </div>
+
+              <!-- Conversation 4 — cash -->
+              <div class="conv" data-c="4">
+                <div class="msg"><div class="ava user">You</div><div class="bubble"><div class="who">You</div><div class="txt">How much cash can I invest right now?</div></div></div>
+                <div class="msg"><div class="ava ai">◆</div><div class="bubble"><div class="who">Claude · via Trade Republic MCP</div>
+                  <div class="txt">You have <b>€3,410.55</b> in uninvested cash, earning interest on the full balance.</div>
+                  <div class="dcard">
+                    <div class="row"><div class="k">Available · EUR</div><div class="v">€3,410.55</div></div>
+                    <div class="row"><div class="k">Interest rate</div><div class="v up">2.00% p.a.</div></div>
+                    <div class="row"><div class="k">Accrued this month</div><div class="v">€5.41</div></div>
+                  </div>
+                </div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ───────────────────────── Capabilities ───────────────────────── -->
+    <section id="capabilities">
+      <div class="wrap">
+        <div class="reveal sec-head">
+          <div class="kicker">Capabilities</div>
+          <h2>Say what you need.<br />Get the answer.</h2>
+          <p>Command turns plain language into read-only queries across every corner of your Trade Republic account — no CSV exports, no screenshots, no manual math.</p>
+        </div>
+
+        <div class="caps">
+          <div class="reveal cap">
+            <span class="num">01</span>
+            <h3>Value over time</h3>
+            <p>Portfolio worth across 1d, 5d, 1m, 1y or max — charted on demand.</p>
+            <div class="mini">
+              <div class="barwrap">
+                <div class="bar" style="height: 40%"></div><div class="bar" style="height: 52%"></div>
+                <div class="bar" style="height: 46%"></div><div class="bar" style="height: 64%"></div>
+                <div class="bar" style="height: 58%"></div><div class="bar" style="height: 78%"></div>
+                <div class="bar hot" style="height: 92%"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="reveal cap">
+            <span class="num">02</span>
+            <h3>Every holding</h3>
+            <p>Stocks, ETFs and crypto with live weight and day change.</p>
+            <div class="mini">
+              <div class="mrow"><span class="name"><span class="badge">ETF</span> MSCI World</span><span class="val">39%</span></div>
+              <div class="mrow"><span class="name"><span class="badge">AS</span> ASML</span><span class="val">25%</span></div>
+              <div class="mrow"><span class="name"><span class="badge">₿</span> Bitcoin</span><span class="val">13%</span></div>
+              <div class="mrow"><span class="name"><span class="badge">TS</span> Tesla</span><span class="val">9%</span></div>
+            </div>
+          </div>
+
+          <div class="reveal cap">
+            <span class="num">03</span>
+            <h3>Cash &amp; interest</h3>
+            <p>Available balance per currency, plus interest accruing.</p>
+            <div class="mini">
+              <div class="cash-big">€3,410.55</div>
+              <div class="cash-sub">EUR available · 2.00% p.a.</div>
+              <div class="mrow" style="margin-top: 12px"><span class="name">Accrued this month</span><span class="g">+€5.41</span></div>
+              <div class="mrow"><span class="name">Last month</span><span class="val">€5.02</span></div>
+            </div>
+          </div>
+
+          <div class="reveal cap wide">
+            <div>
+              <span class="num">04</span>
+              <h3>The whole timeline, summarised</h3>
+              <p>Orders, transfers, dividends and savings-plan executions — paginated by the API, distilled into a plain-English answer you can actually act on.</p>
+              <a class="btn ghost" href="/docs.html">See the timeline format <span class="arr">→</span></a>
+            </div>
+            <div class="mini">
+              <div class="mrow"><span class="name"><span class="badge">↺</span> Savings plan · MSCI World</span><span class="val">−€250.00</span></div>
+              <div class="mrow"><span class="name"><span class="badge">€</span> Dividend · ASML</span><span class="g">+€38.20</span></div>
+              <div class="mrow"><span class="name"><span class="badge">↑</span> Buy · Nvidia</span><span class="val">−€500.00</span></div>
+              <div class="mrow"><span class="name"><span class="badge">↓</span> Sell · Tesla</span><span class="r">+€420.10</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── The everything list ───────────────────────── -->
+    <section style="padding-top: 0">
+      <div class="wrap">
+        <div class="reveal universe">
+          <h2>Your entire account, in plain English.</h2>
+          <p class="lead">Seven read-only tools, one auth layer. Ask any of these — the agent picks the right endpoint and hands you the answer.</p>
+          <div class="qgrid" id="qgrid"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── Trust & Security ───────────────────────── -->
+    <section id="security" style="padding-top: 0">
+      <div class="wrap">
+        <div class="reveal sec-head">
+          <div class="kicker">Accuracy &amp; trust</div>
+          <h2>Read-only by design.<br />Private by default.</h2>
+          <p>Two principles are wired into the architecture — not bolted on as settings you have to find.</p>
+        </div>
+
+        <div class="trust-grid">
+          <div class="reveal tcard">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+            <h3>It runs entirely on your machine</h3>
+            <p>The MCP server and demo talk to Trade Republic directly from your computer. There is no third-party server, no proxy, no telemetry. The session lives at <code>~/.trade-republic-mcp</code> with <code>0600</code> permissions — owner-only.</p>
+            <div class="demo-line ok"><svg class="chk" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M20 6 9 17l-5-5"/></svg> Nothing leaves your device</div>
+          </div>
+
+          <div class="reveal tcard">
+            <div class="ic"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div>
+            <h3>Every action is read-only</h3>
+            <p>The tools expose portfolio, cash and timeline reads — and nothing else. No order, payout or savings-plan endpoint is wired in, so an agent physically <b>cannot</b> move your money, no matter what it's asked.</p>
+            <div class="demo-line"><span class="lock">🔒</span> Trades, transfers &amp; payouts are not exposed</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── Install ───────────────────────── -->
+    <section id="install" style="padding-top: 0">
+      <div class="wrap">
+        <div class="reveal sec-head">
+          <div class="kicker">Get started</div>
+          <h2>Connected in three commands.</h2>
+          <p>Add it to Claude, say “connect my Trade Republic account”, and log in through the browser it opens. Once.</p>
+        </div>
+
+        <div class="reveal install">
+          <pre><span class="c"># 1 · install from the monorepo root</span>
+pnpm install
+pnpm --filter <span class="g">@trade-republic/mcp</span> exec \
+  playwright install chromium
+
+<span class="c"># 2 · register the server with Claude</span>
+claude mcp add trade-republic \
+  -- node /path/to/packages/mcp/server.mjs</pre>
+          <div class="side">
+            <h3>3 · Use it</h3>
+            <ol class="steps">
+              <li><span><b>“Connect my Trade Republic account.”</b> A browser opens for your phone, PIN and 2FA — never typed into the chat.</span></li>
+              <li><span>The page shows <b>✅ Connected</b>. The session is saved locally and auto-refreshed.</span></li>
+              <li><span>Ask: <b>“What's my portfolio value?”</b> — and the rest of this page.</span></li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- resources -->
+        <div class="res">
+          <a class="reveal rcard" href="/api.html">
+            <span class="rt">Reference</span>
+            <h3>Interactive API</h3>
+            <p>OpenAPI 3.1 rendered with Scalar — try every endpoint and see the cookie / WAF auth.</p>
+            <span class="go">Open reference →</span>
+          </a>
+          <a class="reveal rcard" href="/docs.html">
+            <span class="rt">Guide</span>
+            <h3>The write-up</h3>
+            <p>The 3-clock auth problem, the WebSocket protocol and delta format, the full topic catalogue.</p>
+            <span class="go">Read the guide →</span>
+          </a>
+          <a class="reveal rcard" href="http://localhost:5175/demo.html">
+            <span class="rt">Demo</span>
+            <h3>Live app</h3>
+            <p>A tiny React app driving the real API through a local proxy — chart, positions, cash, timeline.</p>
+            <span class="go">Launch the demo →</span>
+          </a>
+          <a class="reveal rcard" href="/openapi.yaml">
+            <span class="rt">Spec</span>
+            <h3>OpenAPI file</h3>
+            <p>The raw spec — drop it into Postman, Swagger UI, or a code generator.</p>
+            <span class="go">Download YAML →</span>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── Final CTA ───────────────────────── -->
+    <section style="padding-top: 0">
+      <div class="wrap">
+        <div class="reveal final">
+          <div class="inner">
+            <h2>This is how you read your portfolio now.</h2>
+            <p>The whole of Trade Republic — holdings, cash and history — running at the speed of a question.</p>
+            <div class="cta-row">
+              <a class="btn red lg" href="#install">Connect the MCP <span class="arr">→</span></a>
+              <a class="btn ghost lg" href="/api.html">Explore the API</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── Footer ───────────────────────── -->
+    <footer>
+      <div class="wrap">
+        <div class="fgrid">
+          <div class="fbrand">
+            <a class="brand" href="/"><span class="mark"></span> Trade Republic <span class="suffix" style="color: var(--muted); font-weight: 580">API</span></a>
+            <p>An unofficial, read-only API and MCP server that wires your Trade Republic portfolio into Claude — entirely on your own machine.</p>
+          </div>
+          <div class="fcol">
+            <h4>Product</h4>
+            <a href="#command">Command</a>
+            <a href="#capabilities">Capabilities</a>
+            <a href="#security">Security</a>
+            <a href="#install">Get started</a>
+          </div>
+          <div class="fcol">
+            <h4>Developers</h4>
+            <a href="/api.html">API reference</a>
+            <a href="/docs.html">Guide</a>
+            <a href="/openapi.yaml">OpenAPI spec</a>
+            <a href="http://localhost:5175/demo.html">Live demo</a>
+          </div>
+          <div class="fcol">
+            <h4>Built with</h4>
+            <a href="https://github.com/pytr-org/pytr">pytr (reference)</a>
+            <a href="https://modelcontextprotocol.io">Model Context Protocol</a>
+            <a href="https://claude.ai">Claude</a>
+          </div>
+        </div>
+
+        <div class="disc">
+          <b>Disclaimer.</b> Unofficial and not affiliated with, endorsed by, or supported by Trade Republic Bank GmbH.
+          Reverse-engineered from the public web app for personal, read-only use. “Trade Republic” and the associated marks
+          belong to their respective owners and are used here only to describe interoperability. Endpoints may change or break
+          without notice. Portfolio figures shown on this page are illustrative. Use at your own risk.
+        </div>
+        <div class="fbot">
+          <span>© 2026 · A community project.</span>
+          <span>Read-only · Self-hosted · Zero telemetry</span>
+        </div>
+      </div>
+    </footer>
+
+    <script>
+      // sticky nav shadow
+      const nav = document.getElementById('nav');
+      const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
+      onScroll();
+      addEventListener('scroll', onScroll, { passive: true });
+
+      // ── Command demo: chips + auto-rotate ──
+      const chips = [...document.querySelectorAll('.chip')];
+      const convs = [...document.querySelectorAll('.conv')];
+      let active = 0, timer;
+      function show(i, manual) {
+        active = i;
+        chips.forEach((c, k) => c.classList.toggle('on', k === i));
+        convs.forEach((c, k) => c.classList.toggle('show', k === i));
+        // re-trigger message animation by reflow
+        const cur = convs[i];
+        cur.querySelectorAll('.msg').forEach((m) => { m.style.animation = 'none'; void m.offsetWidth; m.style.animation = ''; });
+        if (manual) restart();
+      }
+      function next() { show((active + 1) % convs.length); }
+      function restart() { clearInterval(timer); timer = setInterval(next, 5200); }
+      chips.forEach((c) => c.addEventListener('click', () => show(+c.dataset.i, true)));
+      const cmd = document.getElementById('command');
+      cmd.addEventListener('mouseenter', () => clearInterval(timer));
+      cmd.addEventListener('mouseleave', restart);
+      restart();
+
+      // ── The everything list ──
+      const queries = [
+        'What’s my portfolio worth over the last year?',
+        'List my positions, biggest first',
+        'How much did I make this month?',
+        'How much is in crypto versus ETFs?',
+        'How much cash can I invest right now?',
+        'What’s my best-performing holding?',
+        'Show my dividend history',
+        'What interest am I earning on cash?',
+        'When did my savings plan last run?',
+        'What weight is Bitcoin in my portfolio?',
+        'List every buy order this quarter',
+        'What was my 5-day change?',
+        'Did I receive any dividends this week?',
+        'Show all my ETF holdings',
+        'How am I doing since the start?',
+        'Summarise my activity for the last 30 days',
+      ];
+      document.getElementById('qgrid').innerHTML = queries
+        .map((q) => `<div class="q"><span class="arr2">→</span><span class="body">“${q}”</span></div>`)
+        .join('');
+
+      // ── reveal on scroll ──
+      const io = new IntersectionObserver(
+        (entries) => entries.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }),
+        { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
+      );
+      document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+    </script>
+  </body>
+</html>
