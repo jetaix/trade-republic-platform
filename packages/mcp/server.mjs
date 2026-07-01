@@ -10,6 +10,7 @@
  *   tr_login            start login (bootstraps WAF via headless Chromium) -> processId
  *   tr_verify           complete login with the 2FA code (opens the WebSocket)
  *   tr_status           account overview (identity, IBAN, live value + sparkline, session)
+ *   tr_account          raw /api/v2/auth/account payload + detected IBAN (debug)
  *   tr_portfolio_chart  portfolio value time series (REST)
  *   tr_positions        current positions incl. crypto (WS compactPortfolioByType)
  *   tr_cash             cash balances (WS availableCash)
@@ -333,6 +334,41 @@ server.registerTool(
           sessionId: claims.sessionId,
         }),
       );
+    } catch (e) {
+      return fail(e.message);
+    }
+  },
+);
+
+server.registerTool(
+  'tr_account',
+  {
+    title: 'Raw account payload (debug)',
+    description:
+      'Returns the raw /api/v2/auth/account response plus the auto-detected IBAN. ' +
+      'Use this to discover exactly which field holds the IBAN and other personal details.',
+    inputSchema: {},
+  },
+  async () => {
+    if (DEMO)
+      return text({
+        note: 'DEMO mock — not real data',
+        detectedIban: 'DE89 3704 0044 0532 0130 00',
+        raw: {
+          personId: 'demo',
+          firstName: 'Ada',
+          lastName: 'Lovelace',
+          email: 'ada@example.com',
+          phoneNumber: '+33600000012',
+          taxResidency: 'FR',
+          cashAccount: { iban: 'DE89 3704 0044 0532 0130 00', accountNumber: '0384048811' },
+          securitiesAccount: { accountNumber: '0384048802' },
+        },
+      });
+    try {
+      requireLogin();
+      const account = await client.getAccountInfo();
+      return text({ detectedIban: findIban(account) ?? null, raw: account });
     } catch (e) {
       return fail(e.message);
     }

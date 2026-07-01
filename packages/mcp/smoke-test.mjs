@@ -55,8 +55,8 @@ notify('notifications/initialized');
 const tools = await send('tools/list', {});
 const names = tools.result.tools.map((t) => t.name).sort();
 console.log('tools →', names.join(', '));
-assert(names.length === 7, 'exposes 7 tools');
-['tr_authenticate', 'tr_logout', 'tr_status', 'tr_portfolio_chart', 'tr_positions', 'tr_cash', 'tr_timeline'].forEach((n) =>
+assert(names.length === 8, 'exposes 8 tools');
+['tr_authenticate', 'tr_logout', 'tr_status', 'tr_account', 'tr_portfolio_chart', 'tr_positions', 'tr_cash', 'tr_timeline'].forEach((n) =>
   assert(names.includes(n), `has ${n}`),
 );
 
@@ -76,6 +76,10 @@ assert(chartObj.rangeType === '5d' && chartObj.aggregates.length === 120, 'tr_po
 const cash = await send('tools/call', { name: 'tr_cash', arguments: {} });
 const cashObj = JSON.parse(cash.result.content[0].text);
 assert(cashObj[0]?.currencyId === 'EUR', 'tr_cash returns EUR balance');
+
+const account = await send('tools/call', { name: 'tr_account', arguments: {} });
+const accountObj = JSON.parse(account.result.content[0].text);
+assert(/^[A-Z]{2}\d{2}/.test((accountObj.detectedIban || '').replace(/\s/g, '')), 'tr_account returns a detected IBAN');
 
 const openapi = await send('resources/read', { uri: 'tr://openapi' });
 assert(openapi.result.contents[0].text.includes('openapi: 3.1.0'), 'tr://openapi resource returns the spec');
