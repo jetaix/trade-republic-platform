@@ -55,6 +55,11 @@ export function applyDelta(previous, deltaPayload) {
  * ("Unknown topic type"); the current holdings topic is
  * `compactPortfolioByType`, which returns { categories: [{ categoryType, positions }] }
  * (categoryType includes "cryptos").
+ *
+ * NOTE: `compactPortfolioByType` requires a `secAccNo` param (the securities
+ * account number). Without it TR replies with an empty `{ categories: [] }`
+ * snapshot and NO error — so it's injected at subscribe time in `start()`
+ * from the session JWT (`client.secAccNo()`), not hardcoded here.
  */
 const READ_TOPICS = [
   { name: 'portfolio', type: 'compactPortfolioByType' },
@@ -207,7 +212,14 @@ export class TRSocket {
   /** Connect + subscribe to the read-only topics. */
   async start() {
     await this.connect();
-    for (const t of READ_TOPICS) this.subscribe(t.name, t.type, t.params);
+    // `compactPortfolioByType` returns empty categories unless the subscription
+    // carries the securities account number; read it from the session JWT.
+    const secAccNo = this.client.secAccNo?.();
+    if (!secAccNo) console.error('[ws] no secAccNo in session claims — positions may be empty');
+    for (const t of READ_TOPICS) {
+      const params = t.name === 'portfolio' && secAccNo ? { ...t.params, secAccNo } : t.params;
+      this.subscribe(t.name, t.type, params);
+    }
     return this;
   }
 

@@ -283,7 +283,7 @@ match the current web build.)
 
 | Type | Params | Returns |
 | --- | --- | --- |
-| `compactPortfolioByType` | — | **current** holdings topic → `{ categories: [{ categoryType, positions }] }`; `categoryType` includes `cryptos` |
+| `compactPortfolioByType` | `secAccNo` (**required**) | **current** holdings topic → `{ categories: [{ categoryType, positions }] }`; `categoryType` includes `cryptos`. Omitting `secAccNo` returns an empty `{ categories: [] }` snapshot with **no error** — pass the securities account number (from the session JWT, e.g. `client.secAccNo()`). |
 | ~~`portfolio`~~ / ~~`compactPortfolio`~~ | — | **retired on protocol v31** — return `E BAD_SUBSCRIPTION_TYPE "Unknown topic type"`. Use `compactPortfolioByType`. |
 | `portfolioStatus` | — | portfolio open/closed status |
 | `portfolioAggregateHistory` | `range` | portfolio value time series (WS twin of the chart REST call) |
