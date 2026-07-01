@@ -128,16 +128,39 @@ function startKeepalive() {
       console.error(`[keepalive] session refreshed, TTL ~${Math.round(client.sessionTtlMs() / 1000)}s`);
     } catch (e) {
       console.error('[keepalive] refresh failed — re-auth needed:', e.message);
-      stopKeepalive();
-      socket?.close();
-      socket = null;
-      client = null;
+      handleReauth();
     }
   }, 240_000);
 }
 function stopKeepalive() {
   if (keepaliveTimer) clearInterval(keepaliveTimer);
   keepaliveTimer = null;
+}
+
+// ---- session-loss handling -------------------------------------------------
+const REAUTH_TEXT =
+  '🔒 Your Trade Republic session has ended — it timed out, or Trade Republic ' +
+  'closed it (e.g. you signed in on the app / another browser). Nothing is broken: ' +
+  'run tr_authenticate to reconnect (one browser login) and every tool works again.';
+
+/** Tear down the dead session so the next call cleanly prompts re-auth. */
+function handleReauth() {
+  stopKeepalive();
+  socket?.close();
+  socket = null;
+  client = null;
+}
+const isReauth = (e) => e?.code === 'REAUTH' || /re-login required|HTTP 40[13]/.test(e?.message || '');
+
+/** Map tool errors: session-loss → friendly re-auth message; else surface it. */
+function onError(e) {
+  if (isReauth(e)) {
+    handleReauth();
+    return text(REAUTH_TEXT);
+  }
+  if (/not authenticated/.test(e?.message || ''))
+    return text('Not connected to Trade Republic. Run tr_authenticate to connect (opens the browser login).');
+  return fail(e.message);
 }
 
 // ---- server ----------------------------------------------------------------
@@ -429,7 +452,7 @@ server.registerTool(
         }),
       );
     } catch (e) {
-      return fail(e.message);
+      return onError(e);
     }
   },
 );
@@ -464,7 +487,7 @@ server.registerTool(
       const account = await client.getAccountInfo();
       return text({ detectedIban: findIban(account) ?? null, raw: account });
     } catch (e) {
-      return fail(e.message);
+      return onError(e);
     }
   },
 );
@@ -485,7 +508,7 @@ server.registerTool(
       if (DEMO) return text(mockChart(range));
       return text(await client.getChart({ range, currency }));
     } catch (e) {
-      return fail(e.message);
+      return onError(e);
     }
   },
 );
@@ -495,11 +518,12 @@ const wsTool = (name, title, key, desc) =>
     try {
       requireLogin();
       if (DEMO) return text(MOCK_WS[key]);
+      await client.ensureSession(); // detect a dead session instead of serving stale cache
       const state = socket?.state?.[key];
       if (!state) return text({ pending: true, note: 'WebSocket frame not received yet — retry shortly' });
       return text(state);
     } catch (e) {
-      return fail(e.message);
+      return onError(e);
     }
   });
 
