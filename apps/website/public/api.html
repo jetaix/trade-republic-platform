@@ -4,30 +4,72 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Trade Republic API — Reference (Scalar)</title>
+    <meta name="theme-color" content="#0b0b0d" />
     <style>
-      body { margin: 0; }
-      .topbar {
-        position: sticky; top: 0; z-index: 10; display: flex; gap: 16px;
-        align-items: center; padding: 10px 18px; background: #0e1116;
-        border-bottom: 1px solid #232a35; font: 14px -apple-system, sans-serif;
+      @font-face { font-family: 'TR Sans Display'; font-weight: 500; font-display: swap; src: url('/fonts/TradeRepublicSans-Display-500.woff2') format('woff2'); }
+      @font-face { font-family: 'TR Sans Display'; font-weight: 580; font-display: swap; src: url('/fonts/TradeRepublicSans-Display-580.woff2') format('woff2'); }
+      @font-face { font-family: 'TR Sans Display'; font-weight: 680; font-display: swap; src: url('/fonts/TradeRepublicSans-Display-680.woff2') format('woff2'); }
+      @font-face { font-family: 'TR Sans Display'; font-weight: 740; font-display: swap; src: url('/fonts/TradeRepublicSans-Display-740.woff2') format('woff2'); }
+
+      :root {
+        --bg: #0b0b0d; --text: #f4f5f7; --muted: #a6acb8; --muted-2: #7f8593;
+        --line: #23262d; --red: #ff4034; --red-ink: #ff5a4f;
+        --sans: 'TR Sans Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       }
-      .topbar a { color: #6ea8fe; text-decoration: none; }
-      .topbar span { color: #8b93a7; }
+      body { margin: 0; background: var(--bg); }
+      :focus-visible { outline: 2px solid var(--red-ink); outline-offset: 2px; }
+      .topbar {
+        position: sticky; top: 0; z-index: 20; display: flex; gap: 18px; align-items: center;
+        padding: 13px 22px; background: rgba(11, 11, 13, 0.72); backdrop-filter: blur(14px) saturate(180%);
+        -webkit-backdrop-filter: blur(14px) saturate(180%); border-bottom: 1px solid var(--line);
+        font: 580 14px var(--sans); letter-spacing: -0.01em;
+      }
+      .topbar .brand { display: flex; align-items: center; gap: 9px; font-weight: 680; letter-spacing: -0.03em; color: var(--text); }
+      .topbar .brand .mark { width: 22px; height: 22px; border-radius: 6px; background: #000; display: grid; place-items: center; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.09); }
+      .topbar .brand .mark::before { content: ''; width: 8px; height: 8px; border-radius: 2px; background: var(--red); box-shadow: 0 0 10px rgba(255,64,52,0.8); }
+      .topbar a:not(.brand) { color: var(--muted); text-decoration: none; transition: color 0.2s; }
+      .topbar a:not(.brand):hover { color: var(--text); }
+      .topbar .spacer { flex: 1; }
+      .topbar .note { color: var(--muted-2); font-weight: 500; }
     </style>
   </head>
   <body>
     <div class="topbar">
-      <a href="/">← Home</a>
-      <a href="/docs.html">Reference (markdown)</a>
-      <span>OpenAPI 3.1 · rendered with Scalar</span>
+      <a class="brand" href="/"><span class="mark"></span> Trade Republic</a>
+      <a href="/">Home</a>
+      <a href="/docs.html">Guide</a>
+      <span class="spacer"></span>
+      <span class="note">OpenAPI 3.1 · rendered with Scalar</span>
     </div>
 
     <!-- Scalar standalone: point at the served OpenAPI document. -->
-    <script
-      id="api-reference"
-      data-url="/openapi.yaml"
-      data-configuration='{"theme":"purple","hideDownloadButton":false,"layout":"modern"}'
-    ></script>
+    <script id="api-reference" data-url="/openapi.yaml"></script>
+    <script>
+      // Configure Scalar to match the Trade Republic system (dark + red accent + TR Sans).
+      document.getElementById('api-reference').dataset.configuration = JSON.stringify({
+        theme: 'default',
+        darkMode: true,
+        forceDarkModeState: 'dark',
+        hideDarkModeToggle: true,
+        layout: 'modern',
+        hideDownloadButton: false,
+        customCss: [
+          ":root,.dark-mode,.light-mode{",
+          "--scalar-color-accent:#ff5a4f;",
+          "--scalar-background-1:#0b0b0d;--scalar-background-2:#141518;--scalar-background-3:#191b1f;",
+          "--scalar-background-accent:rgba(255,64,52,.14);",
+          "--scalar-border-color:#23262d;",
+          "--scalar-color-1:#f4f5f7;--scalar-color-2:#a6acb8;--scalar-color-3:#7f8593;",
+          "--scalar-button-1:#d92d22;--scalar-button-1-hover:#c4261c;--scalar-button-1-color:#fff;",
+          "--scalar-sidebar-background-1:#08090b;--scalar-sidebar-border-color:#23262d;",
+          "--scalar-sidebar-color-1:#f4f5f7;--scalar-sidebar-color-2:#a6acb8;",
+          "--scalar-sidebar-item-active-background:rgba(255,64,52,.12);--scalar-sidebar-color-active:#ff5a4f;",
+          "--scalar-font:'TR Sans Display',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;",
+          "--scalar-font-code:'SFMono-Regular',ui-monospace,Menlo,monospace;",
+          "}",
+        ].join(''),
+      });
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
   </body>
 </html>
