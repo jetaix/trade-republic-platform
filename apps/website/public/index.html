@@ -325,6 +325,59 @@
         font-size: 13.5px; line-height: 1.65; border: 1px solid var(--ink);
       }
       pre .c { color: #7f8794; } pre .r { color: #ff8079; } pre .g { color: #8be0a8; }
+
+      /* command list with per-line copy */
+      .cmds {
+        background: var(--ink); border: 1px solid var(--ink); border-radius: var(--r);
+        padding: 20px 22px; font-family: var(--mono); font-size: 13.5px; line-height: 1.6; overflow-x: auto;
+      }
+      .cmd-group + .cmd-group { margin-top: 18px; }
+      .cmd-label { display: block; color: #7f8794; margin-bottom: 6px; }
+      .cmd {
+        position: relative; display: flex; align-items: flex-start;
+        color: #e7eaf0; padding: 3px 34px 3px 0;
+      }
+      .cmd code { flex: 1 1 auto; white-space: pre-wrap; word-break: break-word; }
+      .cmd .g { color: #8be0a8; }
+      .cp {
+        position: absolute; top: 1px; right: 0;
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 26px; height: 24px; border-radius: 7px; cursor: pointer;
+        color: #aab0bb; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.14);
+        opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+      }
+      .cmd:hover .cp, .cp:focus-visible { opacity: 1; }
+      .cp:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+      .cp.done { opacity: 1; color: #8be0a8; border-color: rgba(139, 224, 168, 0.4); background: rgba(139, 224, 168, 0.14); }
+      .cp svg { width: 13px; height: 13px; }
+      @media (hover: none) { .cp { opacity: 0.75; } }
+
+      /* click-to-copy prompt chips */
+      .muted-hint { color: var(--muted-2); font-weight: 500; font-size: 0.9em; }
+      .chips { display: block; margin-top: 8px; }
+      .prompt-chip {
+        font-family: var(--sans); font-size: 13.5px; font-weight: 680; letter-spacing: -0.01em;
+        color: var(--ink); background: var(--paper-2); border: 1px solid var(--line);
+        border-radius: 8px; padding: 4px 10px; margin: 0 6px 6px 0; cursor: pointer;
+        transition: background 0.15s, border-color 0.15s, color 0.15s;
+      }
+      .prompt-chip:hover { background: var(--white); border-color: var(--soft); }
+      .prompt-chip.done { color: #16a34a; border-color: rgba(22, 163, 74, 0.35); background: rgba(22, 163, 74, 0.08); }
+
+      /* copy toast */
+      .toast {
+        position: fixed; left: 50%; bottom: 28px; z-index: 1000;
+        transform: translateX(-50%) translateY(14px);
+        display: inline-flex; align-items: center; gap: 9px;
+        background: var(--ink); color: #fff; font-family: var(--sans); font-weight: 680; font-size: 14px;
+        letter-spacing: -0.01em; padding: 12px 18px; border-radius: 99px;
+        box-shadow: 0 10px 34px rgba(0, 0, 0, 0.28);
+        opacity: 0; pointer-events: none;
+        transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+      }
+      .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+      .toast .tk { display: inline-flex; color: #8be0a8; }
+      .toast .tk svg { width: 16px; height: 16px; }
       .copy-btn {
         position: absolute; top: 12px; right: 12px;
         display: inline-flex; align-items: center; gap: 6px;
@@ -612,32 +665,46 @@
       <div class="wrap">
         <div class="reveal sec-head">
           <div class="kicker">Get started</div>
-          <h2>Connected in four steps.</h2>
-          <p>Clone, register, verify, then say “connect my Trade Republic account” and log in through the browser it opens. Once.</p>
+          <h2>Connected in five steps.</h2>
+          <p>Clone, register, verify, open Claude — then log in through the browser it opens. Once. Every line below is one-click copy.</p>
         </div>
 
         <div class="reveal install">
-          <pre><span class="c"># 1 · clone &amp; install</span>
-git clone https://github.com/jetaix/trade-republic-platform
-cd trade-republic-platform
-pnpm install
-pnpm --filter <span class="g">@trade-republic/api</span> exec \
-  playwright install chromium
-
-<span class="c"># 2 · register with Claude (run from the repo root)</span>
-claude mcp add trade-republic \
-  -- node "$(pwd)/packages/mcp/server.mjs"
-
-<span class="c"># 3 · check it worked — should list "trade-republic"</span>
-claude mcp list</pre>
+          <div class="cmds">
+            <div class="cmd-group">
+              <span class="cmd-label"># 1 · clone &amp; install</span>
+              <div class="cmd"><code>git clone https://github.com/jetaix/trade-republic-platform</code></div>
+              <div class="cmd"><code>cd trade-republic-platform</code></div>
+              <div class="cmd"><code>pnpm install</code></div>
+              <div class="cmd"><code>pnpm --filter <span class="g">@trade-republic/api</span> exec playwright install chromium</code></div>
+            </div>
+            <div class="cmd-group">
+              <span class="cmd-label"># 2 · register with Claude (run from the repo root)</span>
+              <div class="cmd"><code>claude mcp add trade-republic -- node "$(pwd)/packages/mcp/server.mjs"</code></div>
+            </div>
+            <div class="cmd-group">
+              <span class="cmd-label"># 3 · check it worked — should list "trade-republic"</span>
+              <div class="cmd"><code>claude mcp list</code></div>
+            </div>
+            <div class="cmd-group">
+              <span class="cmd-label"># 4 · open Claude</span>
+              <div class="cmd"><code>claude</code></div>
+            </div>
+          </div>
           <div class="side">
-            <h3>4 · Connect &amp; use</h3>
+            <h3>5 · Connect &amp; use</h3>
             <ol class="steps">
-              <li><span>In Claude, say <b>“Connect my Trade Republic account.”</b> A browser opens for your phone, PIN and 2FA — never typed into the chat.</span></li>
+              <li><span>In Claude, paste
+                <button class="prompt-chip" data-copy="Connect my Trade Republic account.">“Connect my Trade Republic account.”</button>
+                — a browser opens for your phone, PIN and 2FA (never typed into the chat).</span></li>
               <li><span>The page shows <b>✅ Connected</b>. The session is saved locally and auto-refreshed — you only do this once.</span></li>
-              <li><span>Then just ask, in plain English:<br />
-                <b>“What's my portfolio worth today?”</b> · <b>“List my positions”</b> ·
-                <b>“How much cash do I have?”</b> · <b>“Show my recent transactions.”</b></span></li>
+              <li><span>Then just ask <span class="muted-hint">(click to copy)</span>:
+                <span class="chips">
+                  <button class="prompt-chip" data-copy="What's my portfolio worth today?">“What's my portfolio worth today?”</button>
+                  <button class="prompt-chip" data-copy="List my positions">“List my positions”</button>
+                  <button class="prompt-chip" data-copy="How much cash do I have?">“How much cash do I have?”</button>
+                  <button class="prompt-chip" data-copy="Show my recent transactions.">“Show my recent transactions.”</button>
+                </span></span></li>
             </ol>
           </div>
         </div>
@@ -724,6 +791,8 @@ claude mcp list</pre>
       </div>
     </footer>
 
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
     <script>
       // sticky nav shadow
       const nav = document.getElementById('nav');
@@ -783,29 +852,56 @@ claude mcp list</pre>
       );
       document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
 
-      // ── copy button on every code block ──
-      document.querySelectorAll('pre').forEach((pre) => {
-        const code = pre.innerText; // capture the command text before adding the button
+      // ── copy helpers ──
+      const COPY_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+      const CHECK_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>';
+      async function copyText(text) {
+        try { await navigator.clipboard.writeText(text); }
+        catch {
+          const ta = document.createElement('textarea');
+          ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+          document.body.appendChild(ta); ta.select();
+          try { document.execCommand('copy'); } catch {}
+          document.body.removeChild(ta);
+        }
+      }
+
+      let toastTimer;
+      function showToast(msg) {
+        const t = document.getElementById('toast');
+        if (!t) return;
+        t.innerHTML = '<span class="tk">' + CHECK_SVG + '</span>' + msg;
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 1900);
+      }
+
+      // ── per-command copy button (one per line) ──
+      document.querySelectorAll('.cmd').forEach((row) => {
+        const code = row.querySelector('code');
+        if (!code) return;
+        const text = code.innerText;
         const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'copy-btn';
-        btn.textContent = 'Copy';
-        btn.setAttribute('aria-label', 'Copy to clipboard');
+        btn.type = 'button'; btn.className = 'cp'; btn.setAttribute('aria-label', 'Copy command');
+        btn.innerHTML = COPY_SVG;
         btn.addEventListener('click', async () => {
-          try {
-            await navigator.clipboard.writeText(code);
-          } catch {
-            // fallback for non-secure contexts
-            const ta = document.createElement('textarea');
-            ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
-            document.body.appendChild(ta); ta.select();
-            try { document.execCommand('copy'); } catch {}
-            document.body.removeChild(ta);
-          }
-          btn.textContent = 'Copied'; btn.classList.add('done');
-          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1600);
+          await copyText(text);
+          showToast('Copied to clipboard');
+          btn.innerHTML = CHECK_SVG; btn.classList.add('done');
+          setTimeout(() => { btn.innerHTML = COPY_SVG; btn.classList.remove('done'); }, 1500);
         });
-        pre.appendChild(btn);
+        row.appendChild(btn);
+      });
+
+      // ── click-to-copy prompt chips ──
+      document.querySelectorAll('.prompt-chip').forEach((chip) => {
+        chip.addEventListener('click', async () => {
+          await copyText(chip.dataset.copy || chip.textContent);
+          showToast('Copied — paste into Claude');
+          const orig = chip.textContent;
+          chip.textContent = 'Copied ✓'; chip.classList.add('done');
+          setTimeout(() => { chip.textContent = orig; chip.classList.remove('done'); }, 1200);
+        });
       });
     </script>
   </body>
