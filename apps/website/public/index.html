@@ -612,8 +612,8 @@
       <div class="wrap">
         <div class="reveal sec-head">
           <div class="kicker">Get started</div>
-          <h2>Connected in three commands.</h2>
-          <p>Add it to Claude, say “connect my Trade Republic account”, and log in through the browser it opens. Once.</p>
+          <h2>Connected in four steps.</h2>
+          <p>Clone, register, verify, then say “connect my Trade Republic account” and log in through the browser it opens. Once.</p>
         </div>
 
         <div class="reveal install">
@@ -626,13 +626,18 @@ pnpm --filter <span class="g">@trade-republic/api</span> exec \
 
 <span class="c"># 2 · register with Claude (run from the repo root)</span>
 claude mcp add trade-republic \
-  -- node "$(pwd)/packages/mcp/server.mjs"</pre>
+  -- node "$(pwd)/packages/mcp/server.mjs"
+
+<span class="c"># 3 · check it worked — should list "trade-republic"</span>
+claude mcp list</pre>
           <div class="side">
-            <h3>3 · Use it</h3>
+            <h3>4 · Connect &amp; use</h3>
             <ol class="steps">
-              <li><span><b>“Connect my Trade Republic account.”</b> A browser opens for your phone, PIN and 2FA — never typed into the chat.</span></li>
-              <li><span>The page shows <b>✅ Connected</b>. The session is saved locally and auto-refreshed.</span></li>
-              <li><span>Ask: <b>“What's my portfolio value?”</b> — and the rest of this page.</span></li>
+              <li><span>In Claude, say <b>“Connect my Trade Republic account.”</b> A browser opens for your phone, PIN and 2FA — never typed into the chat.</span></li>
+              <li><span>The page shows <b>✅ Connected</b>. The session is saved locally and auto-refreshed — you only do this once.</span></li>
+              <li><span>Then just ask, in plain English:<br />
+                <b>“What's my portfolio worth today?”</b> · <b>“List my positions”</b> ·
+                <b>“How much cash do I have?”</b> · <b>“Show my recent transactions.”</b></span></li>
             </ol>
           </div>
         </div>
@@ -749,6 +754,7 @@ claude mcp add trade-republic \
 
       // ── The everything list ──
       const queries = [
+        'What’s my portfolio worth today?',
         'What’s my portfolio worth over the last year?',
         'List my positions, biggest first',
         'How much did I make this month?',

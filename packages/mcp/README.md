@@ -63,6 +63,21 @@ Drives the server over stdio (initialize, tools, resources). Prints `ALL PASS`.
 claude mcp add trade-republic -- node "$(pwd)/packages/mcp/server.mjs"
 ```
 
+Check it registered (should list `trade-republic`):
+
+```bash
+claude mcp list
+```
+
+Then, in Claude, say **“Connect my Trade Republic account.”** — a browser opens
+for your phone, PIN and 2FA; the session is saved and auto-refreshed. Now just ask:
+
+- “What's my portfolio worth today?”
+- “List my positions.”
+- “How much cash do I have?”
+- “Show my recent transactions.”
+- “How did my portfolio do this week?”
+
 **Other clients** (JSON config) need the absolute path. Print it, then paste it in:
 
 ```bash
