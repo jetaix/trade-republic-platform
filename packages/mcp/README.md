@@ -29,9 +29,13 @@ server are local to this package (`lib/`).
 
 ## Install & run
 
-From the **monorepo root** (installs the whole workspace, incl. `@trade-republic/api`):
+This is **not published to npm** — you run it from a git clone. From the
+**repo root** (a `pnpm install` there sets up the whole workspace, incl.
+`@trade-republic/api`):
 
 ```bash
+git clone https://github.com/jetaix/trade-republic-platform
+cd trade-republic-platform
 pnpm install
 pnpm --filter @trade-republic/mcp demo    # TR_DEMO=1 — mock data, no credentials, no browser
 ```
@@ -46,19 +50,31 @@ pnpm --filter @trade-republic/mcp start                              # real API
 ## Verify
 
 ```bash
-node smoke-test.mjs   # drives the server over stdio: initialize, tools, resources
+pnpm --filter @trade-republic/mcp test
 ```
+
+Drives the server over stdio (initialize, tools, resources). Prints `ALL PASS`.
 
 ## Register with an MCP client
 
-`claude mcp add` or a client config entry:
+**Claude Code** — copy-paste this from the repo root (`$(pwd)` fills in your path):
+
+```bash
+claude mcp add trade-republic -- node "$(pwd)/packages/mcp/server.mjs"
+```
+
+**Other clients** (JSON config) need the absolute path. Print it, then paste it in:
+
+```bash
+echo "$(pwd)/packages/mcp/server.mjs"
+```
 
 ```json
 {
   "mcpServers": {
     "trade-republic": {
       "command": "node",
-      "args": ["/absolute/path/trade-republic-api/packages/mcp/server.mjs"],
+      "args": ["<paste the path printed above>"],
       "env": { "TR_DEMO": "1" }
     }
   }
@@ -86,10 +102,14 @@ node --version
 - If you see `command not found` → download the **LTS** installer from
   <https://nodejs.org>, run it, then close and reopen Terminal and try again.
 
-### 3. Go to the project (monorepo root)
+### 3. Download the project (git clone)
 ```bash
-cd path/to/trade-republic-api      # the folder you cloned / downloaded
+cd ~                                   # or wherever you keep projects
+git clone https://github.com/jetaix/trade-republic-platform
+cd trade-republic-platform
 ```
+(If `git` says command not found, install it from <https://git-scm.com>. If `pnpm`
+is missing, run `npm install -g pnpm` first.)
 
 ### 4. Install it (one-time, ~2 min)
 ```bash

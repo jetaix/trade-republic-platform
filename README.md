@@ -24,12 +24,14 @@ and `website` all depend on it (`workspace:*`), so there's no duplicated client 
 
 ## Setup
 
-Requires Node ≥ 22 and pnpm.
+Requires Node ≥ 22, pnpm, and git. Run from a **git clone** (this project is not
+published to any registry). Copy-paste:
 
 ```bash
+git clone https://github.com/jetaix/trade-republic-platform
+cd trade-republic-platform
 pnpm install
-# for the MCP / demo real mode, install the headless browser once:
-pnpm --filter @trade-republic/mcp exec playwright install chromium
+pnpm --filter @trade-republic/mcp exec playwright install chromium   # MCP/demo real mode only
 ```
 
 ## Common tasks
@@ -53,8 +55,13 @@ pnpm --filter @trade-republic/mcp exec playwright install chromium
 - **MCP** — [`packages/mcp/README.md`](packages/mcp/README.md) (setup + tools)
 - **Demo** — [`apps/demo/README.md`](apps/demo/README.md)
 
-## Publishing
+## Distribution
 
-`@trade-republic/mcp` and `@trade-republic/api` are publishable (add a LICENSE and
-`npm publish`, or wire up Changesets for versioned releases). `demo` and `website`
-are `private` apps meant to be deployed, not published.
+Everything is used **from a git clone** — nothing is published to npm. To use the
+MCP, clone the repo and point your client at `packages/mcp/server.mjs` (see the
+[MCP README](packages/mcp/README.md)). To share updates, push to
+<https://github.com/jetaix/trade-republic-platform>; users `git pull` + `pnpm install`.
+
+The **website** (static: landing + Scalar reference + guide) is the only piece
+meant to be hosted — deploy `apps/website` to Vercel (config in
+`apps/website/vercel.json`).

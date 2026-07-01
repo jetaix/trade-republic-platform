@@ -603,14 +603,16 @@
         </div>
 
         <div class="reveal install">
-          <pre><span class="c"># 1 · install from the monorepo root</span>
+          <pre><span class="c"># 1 · clone &amp; install</span>
+git clone https://github.com/jetaix/trade-republic-platform
+cd trade-republic-platform
 pnpm install
 pnpm --filter <span class="g">@trade-republic/mcp</span> exec \
   playwright install chromium
 
-<span class="c"># 2 · register the server with Claude</span>
+<span class="c"># 2 · register with Claude (run from the repo root)</span>
 claude mcp add trade-republic \
-  -- node /path/to/packages/mcp/server.mjs</pre>
+  -- node "$(pwd)/packages/mcp/server.mjs"</pre>
           <div class="side">
             <h3>3 · Use it</h3>
             <ol class="steps">
@@ -634,12 +636,6 @@ claude mcp add trade-republic \
             <h3>The write-up</h3>
             <p>The 3-clock auth problem, the WebSocket protocol and delta format, the full topic catalogue.</p>
             <span class="go">Read the guide →</span>
-          </a>
-          <a class="reveal rcard" href="http://localhost:5175/demo.html">
-            <span class="rt">Demo</span>
-            <h3>Live app</h3>
-            <p>A tiny React app driving the real API through a local proxy — chart, positions, cash, timeline.</p>
-            <span class="go">Launch the demo →</span>
           </a>
           <a class="reveal rcard" href="/openapi.yaml">
             <span class="rt">Spec</span>
@@ -687,7 +683,6 @@ claude mcp add trade-republic \
             <a href="/api.html">API reference</a>
             <a href="/docs.html">Guide</a>
             <a href="/openapi.yaml">OpenAPI spec</a>
-            <a href="http://localhost:5175/demo.html">Live demo</a>
           </div>
           <div class="fcol">
             <h4>Built with</h4>
