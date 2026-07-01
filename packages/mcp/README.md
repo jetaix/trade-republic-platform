@@ -101,6 +101,24 @@ Drop `TR_DEMO` for the real API. Typical flow from the client:
 `tr_positions` / `tr_cash` / `tr_timeline` / `tr_portfolio_chart`. Auth persists
 across restarts; `tr_logout` clears it.
 
+## `✔ Connected` ≠ logged in
+
+`claude mcp list` showing `trade-republic … ✔ Connected` only means the **server
+process started** and answered the MCP handshake — it says nothing about your
+Trade Republic login. Every healthy MCP server shows this with zero auth.
+
+To check the **actual** Trade Republic session, ask the client to run **`tr_status`**:
+
+- `loggedIn: true` + a `secAccNo` → you're authenticated (either you just did
+  `tr_authenticate`, or a previous session was restored — see below).
+- `loggedIn: false` → run `tr_authenticate` (opens the browser login).
+
+**Why you might be logged in without doing anything:** the session is saved to
+`~/.trade-republic-mcp/session.json` (`0600`) and auto-restored + refreshed on
+startup. So after the first browser login it "just works" across restarts. To
+start fresh (or switch accounts): `tr_logout`, or delete that file, then
+`tr_authenticate` again.
+
 ## Run with REAL data — step by step (non-technical)
 
 Follow these exactly. Copy each command, paste it into **Terminal**, press Enter.
