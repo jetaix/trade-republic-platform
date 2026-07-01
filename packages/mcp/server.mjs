@@ -226,8 +226,24 @@ function box(title, w = 54) {
     '  ╰' + '─'.repeat(w - 2) + '╯',
   ].join('\n');
 }
+/** Flatten an object to [dotted.path, value] pairs for every scalar leaf. */
+function flattenScalars(obj, prefix = '', out = []) {
+  if (!obj || typeof obj !== 'object') return out;
+  for (const [k, v] of Object.entries(obj)) {
+    if (v == null || k === 'token') continue;
+    const key = prefix ? `${prefix}.${k}` : k;
+    if (typeof v === 'object') {
+      if (Array.isArray(v) && v.every((x) => x == null || typeof x !== 'object')) out.push([key, v.join(', ')]);
+      else flattenScalars(v, key, out);
+    } else {
+      out.push([key, String(v)]);
+    }
+  }
+  return out;
+}
+
 function renderReport(d) {
-  const row = (label, val) => `     ${String(label).padEnd(15)}${val}`;
+  const row = (label, val) => `     ${(String(label) + '  ').padEnd(20)}${val}`;
   const L = [];
   L.push(box('T R A D E   R E P U B L I C   ·   M C P'));
   L.push('       ' + (d.spark || '') + '   ✅ connected');
@@ -235,40 +251,86 @@ function renderReport(d) {
   if (d.netValue != null)
     L.push(`  💶  ${eur(d.netValue)}   ${d.range || '1d'}${d.deltaPct != null ? `   ${d.deltaPct >= 0 ? '▲' : '▼'} ${Math.abs(d.deltaPct).toFixed(2)}%` : ''}`);
   L.push('');
-  L.push('  👤 Account');
+
+  L.push('  👤 Identity');
   L.push(row('User ID', d.userId ?? '—'));
-  if (d.name) L.push(row('Name', d.name));
-  if (d.email) L.push(row('Email', d.email));
-  if (d.phone) L.push(row('Phone', d.phone));
+  if (d.actId && d.actId !== d.userId) L.push(row('Actor ID', d.actId));
+  if (d.rel) L.push(row('Relationship', d.rel));
   L.push(row('Jurisdiction', d.jurisdiction ?? '—'));
   L.push(row('Status', d.status ?? '—'));
-  if (d.features?.length) L.push(row('Features', d.features.join(', ')));
+  if (d.tokenType) L.push(row('Token type', d.tokenType));
   L.push('');
+
+  L.push('  🪪 Personal details');
+  if (d.accountScalars?.length) {
+    for (const [k, v] of d.accountScalars) L.push(row(k, v));
+  } else {
+    L.push('     ' + (d.accountError ? `unavailable — ${d.accountError}` : 'none returned by /api/v2/auth/account'));
+    L.push('     (run tr_account for the raw payload)');
+  }
+  L.push('');
+
   L.push('  🏦 Accounts');
-  L.push(row('Securities', `${d.secAccNo ?? '—'}   (depot · internal API id)`));
-  L.push(row('Cash', `${d.cashAccNo ?? '—'}   (internal API id)`));
-  L.push(row('IBAN', d.iban || '— (not returned by the account endpoint)'));
+  L.push(row('Securities', ((d.sec || []).join(', ') || '—') + '   (internal API id)'));
+  L.push(row('Cash', ((d.cash || []).join(', ') || '—') + '   (internal API id)'));
+  L.push(row('IBAN', d.iban || '— (see tr_account)'));
   L.push('');
-  L.push('  📊 Portfolio');
-  L.push(row('Net value', d.netValue != null ? eur(d.netValue) : '— (ask “list my positions”)'));
-  L.push(row('Positions', d.positionsCount != null ? `${d.positionsCount}${d.cryptoCount ? ` (incl. ${d.cryptoCount} crypto)` : ''}` : '—'));
-  L.push(row('Cash avail.', d.cashAvailable != null ? eur(d.cashAvailable) : '—'));
-  L.push('');
-  L.push('  🔌 Session');
-  L.push(row('WebSocket', d.wsConnected ? 'connected' : 'connecting…'));
-  L.push(row('tr_session', `valid ~${d.ttlSec}s · auto-refresh`));
+
+  L.push('  🔑 Device & session');
+  if (d.device) L.push(row('Device ID', d.device));
+  if (d.externalId) L.push(row('External ID', d.externalId));
   if (d.sessionId) L.push(row('Session ID', d.sessionId));
+  if (d.issued) L.push(row('Issued', d.issued));
+  if (d.expires) L.push(row('Expires', d.expires));
+  L.push(row('tr_session', `valid ~${d.ttlSec}s · auto-refresh`));
+  L.push(row('WebSocket', d.wsConnected ? 'connected' : 'connecting…'));
+  L.push('');
+
+  L.push('  🚩 Features');
+  L.push('     ' + ((d.features || []).join(' · ') || '—'));
+  L.push('');
+
+  L.push('  📊 Portfolio');
+  L.push(row('Net value', d.netValue != null ? eur(d.netValue) : '—'));
+  if (d.cashBalances?.length) {
+    for (const c of d.cashBalances) L.push(row('Cash · ' + (c.currency || '?'), eur(c.amount)));
+  } else {
+    L.push(row('Cash avail.', d.cashAvailable != null ? eur(d.cashAvailable) : '—'));
+  }
+  if (d.positions?.length) {
+    L.push(row('Positions', String(d.positions.length)));
+    for (const p of d.positions.slice(0, 25))
+      L.push(`       • ${p.name}${p.category ? ` · ${p.category}` : ''}${p.value != null ? `   ${eur(p.value)}` : p.size != null ? `   ×${p.size}` : ''}`);
+  } else {
+    L.push(row('Positions', '— (open tr_positions)'));
+  }
+  if (d.timelineCount != null) L.push(row('Timeline', `${d.timelineCount} events`));
   return L.join('\n');
 }
 
 const DEMO_REPORT = {
   spark: sparkline([16.1, 16.0, 15.7, 16.4, 16.9, 16.6, 16.8, 17.0, 16.7, 17.01]),
   netValue: 12842.55, range: '1d', deltaPct: 2.15,
-  userId: 'demo-user (mock)', name: 'Ada Lovelace', email: 'ada@example.com', phone: '+33 6 •• •• •• 12',
-  jurisdiction: 'FR', status: 'ACTIVE',
-  features: ['card', 'crypto', 'bondTrading', 'trIbanActivated'],
-  secAccNo: '0384048802', cashAccNo: '0384048811', iban: 'DE89 3704 0044 0532 0130 00',
-  positionsCount: 4, cryptoCount: 1, cashAvailable: 1284.19, wsConnected: true, ttlSec: 300, sessionId: '6c822592-…',
+  userId: 'aeed69c9-… (mock)', actId: 'aeed69c9-… (mock)', rel: 'self',
+  jurisdiction: 'FR', status: 'ACTIVE', tokenType: 'SESSION',
+  accountScalars: [
+    ['firstName', 'Ada'], ['lastName', 'Lovelace'], ['email', 'ada@example.com'],
+    ['phoneNumber', '+33600000012'], ['dateOfBirth', '1990-01-01'], ['taxResidency', 'FR'],
+    ['address.street', '12 Rue de Rivoli'], ['address.city', 'Paris'], ['address.postalCode', '75001'],
+    ['cashAccount.iban', 'DE89 3704 0044 0532 0130 00'], ['experience.stocks', 'experienced'],
+  ],
+  sec: ['0384048802'], cash: ['0384048811'], iban: 'DE89 3704 0044 0532 0130 00',
+  device: '0a9a8a05-…', externalId: 'edd87383-…', sessionId: '6c822592-…',
+  issued: '2026-07-01 11:21:35 UTC', expires: '2026-07-01 11:26:35 UTC',
+  features: ['currentAccountActivated', 'trIbanActivated', 'card', 'crypto', 'bondTrading', 'pvEnabledForCards'],
+  cashBalances: [{ currency: 'EUR', amount: 1284.19 }],
+  positions: [
+    { name: 'Tesla', category: 'stocks', value: 612.3 },
+    { name: 'Apple', category: 'stocks', value: 1841 },
+    { name: 'iShares Core MSCI World', category: 'stocks', value: 2010.5 },
+    { name: 'Solana', category: 'cryptos', value: 65.37 },
+  ],
+  timelineCount: 42, wsConnected: true, ttlSec: 300,
 };
 
 server.registerTool(
@@ -285,12 +347,11 @@ server.registerTool(
     try {
       if (!client?.isLoggedIn) return text('Not authenticated yet. Run tr_authenticate to connect (opens a browser).');
       const claims = client.claims() ?? {};
+      const fmt = (s) => { try { return new Date(s * 1000).toISOString().replace('T', ' ').slice(0, 19) + ' UTC'; } catch { return null; } };
 
-      // account info + IBAN (best effort — don't fail the report if it 4xx's)
-      let account = null;
-      try {
-        account = await client.getAccountInfo();
-      } catch {}
+      // full account payload (best effort — never fails the report)
+      let account = null, accountError = null;
+      try { account = await client.getAccountInfo(); } catch (e) { accountError = e.message; }
 
       // live 1d chart → net value, delta, sparkline (best effort)
       let netValue = socket?.state?.portfolio?.netValue ?? null;
@@ -298,40 +359,44 @@ server.registerTool(
       try {
         const chart = await client.getChart({ range: '1d' });
         const pts = (chart.points ?? []).map((p) => Number(p.netValue)).filter(Number.isFinite);
-        if (pts.length) {
-          spark = sparkline(pts);
-          netValue = pts[pts.length - 1];
-          if (pts[0]) deltaPct = ((pts[pts.length - 1] - pts[0]) / pts[0]) * 100;
-        }
+        if (pts.length) { spark = sparkline(pts); netValue = pts.at(-1); if (pts[0]) deltaPct = ((pts.at(-1) - pts[0]) / pts[0]) * 100; }
       } catch {}
 
-      const positions = flatPositions(socket?.state?.portfolio);
+      const owner = claims.act?.acc?.owner?.default ?? {};
       const cashArr = Array.isArray(socket?.state?.cash) ? socket.state.cash : [];
-      const first = account && findByKey(account, /first.?name/i);
-      const last = account && findByKey(account, /last.?name/i);
+      const positions = flatPositions(socket?.state?.portfolio).map((p) => ({
+        name: p.name ?? p.instrumentId ?? p.isin ?? p.id ?? '?',
+        category: p.categoryType,
+        size: p.netSize ?? p.size ?? p.quantity,
+        value: p.netValue ?? p.value ?? p.marketValue,
+      }));
 
       return text(
         renderReport({
-          spark,
-          netValue,
-          deltaPct,
-          range: '1d',
+          spark, netValue, deltaPct, range: '1d',
           userId: claims.sub,
-          name: [first, last].filter(Boolean).join(' ') || null,
-          email: account && findByKey(account, /email/i, /@/),
-          phone: account && findByKey(account, /phone|mobile/i),
+          actId: claims.act?.id,
+          rel: claims.act?.rel,
           jurisdiction: claims.jurisdiction,
           status: claims.status,
-          features: client.features(),
-          secAccNo: client.secAccNo(),
-          cashAccNo: client.cashAccNo(),
+          tokenType: claims.type,
+          accountScalars: account ? flattenScalars(account) : [],
+          accountError,
+          sec: owner.sec ?? (client.secAccNo() ? [client.secAccNo()] : []),
+          cash: owner.cash ?? (client.cashAccNo() ? [client.cashAccNo()] : []),
           iban: account ? findIban(account) : null,
-          positionsCount: positions.length || null,
-          cryptoCount: positions.filter((p) => /crypto/i.test(p.categoryType || '')).length,
+          device: client.jar?.get?.('tr_device'),
+          externalId: client.jar?.get?.('tr_external_id'),
+          sessionId: claims.sessionId,
+          issued: fmt(claims.iat),
+          expires: fmt(claims.exp),
+          features: client.features(),
+          cashBalances: cashArr.map((c) => ({ currency: c.currencyId ?? c.currency ?? 'EUR', amount: c.amount ?? c.value })),
           cashAvailable: cashArr[0]?.amount ?? null,
+          positions,
+          timelineCount: socket?.state?.timeline?.items?.length ?? null,
           wsConnected: Boolean(socket?.connected),
           ttlSec: Math.round((client.sessionTtlMs() ?? 0) / 1000),
-          sessionId: claims.sessionId,
         }),
       );
     } catch (e) {
