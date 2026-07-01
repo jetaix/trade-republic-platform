@@ -31,7 +31,7 @@ published to any registry). Copy-paste:
 git clone https://github.com/jetaix/trade-republic-platform
 cd trade-republic-platform
 pnpm install
-pnpm --filter @trade-republic/mcp exec playwright install chromium   # MCP/demo real mode only
+pnpm --filter @trade-republic/api exec playwright install chromium   # MCP/demo real mode only
 ```
 
 ## Common tasks

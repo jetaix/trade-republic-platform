@@ -319,11 +319,25 @@
       .install { margin-top: 52px; display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: stretch; }
       @media (max-width: 860px) { .install { grid-template-columns: 1fr; } }
       pre {
+        position: relative;
         margin: 0; background: var(--ink); color: #e7eaf0; border-radius: var(--r);
         padding: 22px 24px; overflow-x: auto; font-family: var(--mono);
         font-size: 13.5px; line-height: 1.65; border: 1px solid var(--ink);
       }
       pre .c { color: #7f8794; } pre .r { color: #ff8079; } pre .g { color: #8be0a8; }
+      .copy-btn {
+        position: absolute; top: 12px; right: 12px;
+        display: inline-flex; align-items: center; gap: 6px;
+        font-family: var(--sans); font-size: 12px; font-weight: 680; letter-spacing: -0.01em;
+        padding: 6px 11px; border-radius: 8px; cursor: pointer;
+        color: #cfd4dd; background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        opacity: 0; transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+      }
+      pre:hover .copy-btn, .copy-btn:focus-visible { opacity: 1; }
+      .copy-btn:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
+      .copy-btn.done { color: #8be0a8; border-color: rgba(139, 224, 168, 0.4); background: rgba(139, 224, 168, 0.12); opacity: 1; }
+      @media (hover: none) { .copy-btn { opacity: 1; } }
       .install .side { background: var(--white); border: 1px solid var(--line); border-radius: var(--r); padding: 26px; }
       .install .side h3 { font-size: 1.15rem; margin-bottom: 14px; letter-spacing: -0.03em; }
       .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 16px; }
@@ -607,7 +621,7 @@
 git clone https://github.com/jetaix/trade-republic-platform
 cd trade-republic-platform
 pnpm install
-pnpm --filter <span class="g">@trade-republic/mcp</span> exec \
+pnpm --filter <span class="g">@trade-republic/api</span> exec \
   playwright install chromium
 
 <span class="c"># 2 · register with Claude (run from the repo root)</span>
@@ -762,6 +776,31 @@ claude mcp add trade-republic \
         { threshold: 0.12, rootMargin: '0px 0px -8% 0px' }
       );
       document.querySelectorAll('.reveal').forEach((el) => io.observe(el));
+
+      // ── copy button on every code block ──
+      document.querySelectorAll('pre').forEach((pre) => {
+        const code = pre.innerText; // capture the command text before adding the button
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'copy-btn';
+        btn.textContent = 'Copy';
+        btn.setAttribute('aria-label', 'Copy to clipboard');
+        btn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(code);
+          } catch {
+            // fallback for non-secure contexts
+            const ta = document.createElement('textarea');
+            ta.value = code; ta.style.position = 'fixed'; ta.style.opacity = '0';
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); } catch {}
+            document.body.removeChild(ta);
+          }
+          btn.textContent = 'Copied'; btn.classList.add('done');
+          setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('done'); }, 1600);
+        });
+        pre.appendChild(btn);
+      });
     </script>
   </body>
 </html>

@@ -43,7 +43,7 @@ pnpm --filter @trade-republic/mcp demo    # TR_DEMO=1 — mock data, no credenti
 For real mode, also download the headless browser used to pass the WAF challenge:
 
 ```bash
-pnpm --filter @trade-republic/mcp exec playwright install chromium   # one-time
+pnpm --filter @trade-republic/api exec playwright install chromium   # one-time
 pnpm --filter @trade-republic/mcp start                              # real API
 ```
 
@@ -114,7 +114,7 @@ is missing, run `npm install -g pnpm` first.)
 ### 4. Install it (one-time, ~2 min)
 ```bash
 pnpm install
-pnpm --filter @trade-republic/mcp exec playwright install chromium
+pnpm --filter @trade-republic/api exec playwright install chromium
 ```
 (The second command downloads a mini browser used to pass Trade Republic's
 robot-check. It only runs once.)
