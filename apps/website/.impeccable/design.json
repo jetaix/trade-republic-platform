@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-07-01T00:00:00.000Z",
+  "title": "Design System: Trade Republic API & MCP",
+  "extensions": {
+    "colorMeta": {
+      "tr-red": {
+        "role": "primary",
+        "displayName": "Trade Republic Red",
+        "canonical": "#ff4034",
+        "tonalRamp": ["#2b0a08", "#5c130e", "#8f1d16", "#c22a20", "#e5352a", "#ff4034", "#ff7a72", "#ffc4bf"]
+      },
+      "tr-red-cta": {
+        "role": "primary",
+        "displayName": "Trade Republic Red (CTA)",
+        "canonical": "#d92d22",
+        "tonalRamp": ["#3a0d09", "#6b1610", "#9c2018", "#c4261c", "#d92d22", "#ff4034", "#ff7a72", "#ffc4bf"]
+      },
+      "bg": {
+        "role": "neutral",
+        "displayName": "Ink",
+        "canonical": "#0b0b0d",
+        "tonalRamp": ["#08090b", "#0b0b0d", "#0e0f12", "#141518", "#191b1f", "#1e2126", "#23262d", "#2c3038"]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Paper Text",
+        "canonical": "#f4f5f7",
+        "tonalRamp": ["#4a4d52", "#7f8593", "#a6acb8", "#c3c8d0", "#dfe2e7", "#f4f5f7", "#ffffff", "#ffffff"]
+      },
+      "positive": {
+        "role": "tertiary",
+        "displayName": "Gain Green",
+        "canonical": "#55e08a",
+        "tonalRamp": ["#052e16", "#0a4d22", "#0f7332", "#16a34a", "#22c55e", "#55e08a", "#86efac", "#dcfce7"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Hero and final-CTA headlines only. Weight 740, tight tracking, balanced." },
+      "body": { "displayName": "Body", "purpose": "Default prose at 500; line-height 1.6 on dark (light type needs more air)." },
+      "label": { "displayName": "Label / Kicker", "purpose": "Red section kicker (with leading rule) and footer heads. Sparse." },
+      "mono": { "displayName": "Mono", "purpose": "Commands, config, the command input — anything a developer would type." }
+    },
+    "shadows": [
+      { "name": "instrument-float", "value": "inset 0 1px 0 rgba(255,255,255,0.05), 0 50px 120px -40px rgba(0,0,0,0.85), 0 0 80px -30px rgba(255,64,52,0.25)", "purpose": "Floats the command instrument and gives it a red halo." },
+      { "name": "glass-dock", "value": "inset 0 1px 0 rgba(255,255,255,0.08), inset 0 -8px 20px rgba(0,0,0,0.3), 0 20px 48px rgba(0,0,0,0.5)", "purpose": "The one glassmorphism moment — the fixed bottom liquid-glass dock." },
+      { "name": "tile-hover-lift", "value": "0 30px 60px -40px rgba(0,0,0,0.8)", "purpose": "Content tiles' only elevation — on hover with translateY(-4px)." },
+      { "name": "toast", "value": "0 16px 40px rgba(0,0,0,0.6)", "purpose": "Transient copy-confirmation pill." },
+      { "name": "cta-glow", "value": "0 12px 34px -12px rgba(255,64,52,0.65)", "purpose": "Red halo under the primary CTA." }
+    ],
+    "motion": [
+      { "name": "ease-out-quart", "value": "cubic-bezier(0.22, 1, 0.36, 1)", "purpose": "Primary easing — transitions, dock-in, swipe." },
+      { "name": "ease-out-expo", "value": "cubic-bezier(0.16, 1, 0.3, 1)", "purpose": "Entrance/reveal easing — hero rise, scroll reveals, card rise." },
+      { "name": "lenis-scroll", "value": "duration 1.05, easing 1.001 - 2^(-10t)", "purpose": "Buttery smooth-scroll (Lenis), disabled under reduced-motion." },
+      { "name": "glow-drift", "value": "16-20s alternate", "purpose": "Slow drift of the hero red radial glow." },
+      { "name": "stream", "value": "~34ms/word", "purpose": "Word-by-word reply stream in the command answer, with a blinking caret." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "560px" },
+      { "name": "md", "value": "720px" },
+      { "name": "lg", "value": "900px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Red Button (primary CTA)",
+      "kind": "button",
+      "refersTo": "button-red",
+      "description": "Highest-intent CTA — AA-safe deep red fill, white text, red halo.",
+      "html": "<button class=\"ds-btn-red\">Connect the MCP <span class=\"ds-arr\">→</span></button>",
+      "css": ".ds-btn-red{display:inline-flex;align-items:center;gap:8px;font-family:'TR Sans Display',sans-serif;font-weight:680;font-size:15px;letter-spacing:-0.01em;padding:11px 19px;border-radius:999px;border:1px solid transparent;background:#d92d22;color:#fff;cursor:pointer;box-shadow:0 12px 34px -12px rgba(255,64,52,0.65);transition:transform .22s cubic-bezier(.22,1,.36,1),background .2s,box-shadow .2s}.ds-btn-red:hover{transform:translateY(-1px);background:#c4261c;box-shadow:0 16px 40px -12px rgba(255,64,52,0.75)}.ds-btn-red .ds-arr{transition:transform .25s cubic-bezier(.22,1,.36,1)}.ds-btn-red:hover .ds-arr{transform:translateX(3px)}.ds-btn-red:focus-visible{outline:2px solid #ff5a4f;outline-offset:3px}"
+    },
+    {
+      "name": "Solid Button (inverted)",
+      "kind": "button",
+      "refersTo": "button-solid",
+      "description": "Default action — light fill, ink text; the high-contrast inverted button.",
+      "html": "<button class=\"ds-btn-solid\">Get started <span class=\"ds-arr\">→</span></button>",
+      "css": ".ds-btn-solid{display:inline-flex;align-items:center;gap:8px;font-family:'TR Sans Display',sans-serif;font-weight:680;font-size:15px;letter-spacing:-0.01em;padding:11px 19px;border-radius:999px;border:1px solid transparent;background:#f4f5f7;color:#0b0b0d;cursor:pointer;transition:transform .22s cubic-bezier(.22,1,.36,1),background .2s}.ds-btn-solid:hover{transform:translateY(-1px);background:#fff}.ds-btn-solid .ds-arr{transition:transform .25s cubic-bezier(.22,1,.36,1)}.ds-btn-solid:hover .ds-arr{transform:translateX(3px)}.ds-btn-solid:focus-visible{outline:2px solid #ff5a4f;outline-offset:3px}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Secondary action on dark — transparent, hairline border brightens on hover.",
+      "html": "<button class=\"ds-btn-ghost\">Explore the API</button>",
+      "css": ".ds-btn-ghost{display:inline-flex;align-items:center;gap:8px;font-family:'TR Sans Display',sans-serif;font-weight:680;font-size:15px;letter-spacing:-0.01em;padding:11px 19px;border-radius:999px;border:1px solid #2c3038;background:transparent;color:#f4f5f7;cursor:pointer;transition:border-color .2s,background .2s,transform .22s cubic-bezier(.22,1,.36,1)}.ds-btn-ghost:hover{border-color:rgba(255,255,255,0.4);background:rgba(255,255,255,0.04);transform:translateY(-1px)}.ds-btn-ghost:focus-visible{outline:2px solid #ff5a4f;outline-offset:3px}"
+    },
+    {
+      "name": "Command result row",
+      "kind": "custom",
+      "refersTo": "result-row",
+      "description": "A selectable suggested-question row in the command instrument. Selected state gets a red tint.",
+      "html": "<ul class=\"ds-results\"><li aria-selected=\"true\"><span class=\"ds-ico\">◧</span><span class=\"ds-q\">What's my portfolio worth right now?</span><span class=\"ds-tag\">Value</span><span class=\"ds-go\">›</span></li><li><span class=\"ds-ico\">▦</span><span class=\"ds-q\">List my positions, biggest first</span><span class=\"ds-tag\">Holdings</span><span class=\"ds-go\">›</span></li></ul>",
+      "css": ".ds-results{list-style:none;margin:0;padding:8px;background:#141518;border:1px solid #2c3038;border-radius:16px;font-family:'TR Sans Display',sans-serif;max-width:520px}.ds-results li{display:flex;align-items:center;gap:13px;padding:12px 14px;border-radius:13px;cursor:pointer;color:#f4f5f7;font-weight:580;font-size:15.5px;border:1px solid transparent;transition:background .15s,border-color .15s}.ds-results .ds-ico{flex:none;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#1e2126;border:1px solid #23262d;color:#a6acb8;font-size:13px}.ds-results .ds-q{flex:1 1 auto}.ds-results .ds-tag{flex:none;font-size:11.5px;font-weight:680;color:#7f8593;letter-spacing:.02em}.ds-results .ds-go{flex:none;color:#7f8593;opacity:0;transition:opacity .15s}.ds-results li[aria-selected='true']{background:rgba(255,64,52,.10);border-color:rgba(255,64,52,.28)}.ds-results li[aria-selected='true'] .ds-ico{background:rgba(255,64,52,.16);border-color:rgba(255,64,52,.3);color:#ff5a4f}.ds-results li[aria-selected='true'] .ds-go{opacity:1;color:#ff5a4f}.ds-results li:hover{background:rgba(255,255,255,.04)}"
+    },
+    {
+      "name": "Prompt chip (copy)",
+      "kind": "chip",
+      "refersTo": "prompt-chip",
+      "description": "Click-to-copy example prompt. 8px radius, red-tinted hover, green done state.",
+      "html": "<button class=\"ds-prompt-chip\">“What's my portfolio worth today?”</button>",
+      "css": ".ds-prompt-chip{font-family:'TR Sans Display',sans-serif;font-size:13px;font-weight:680;letter-spacing:-0.01em;color:#f4f5f7;background:#1e2126;border:1px solid #2c3038;border-radius:8px;padding:5px 11px;cursor:pointer;transition:background .15s,border-color .15s,color .15s}.ds-prompt-chip:hover{background:#191b1f;border-color:rgba(255,64,52,.4);color:#fff}.ds-prompt-chip:focus-visible{outline:2px solid #ff5a4f;outline-offset:3px}"
+    },
+    {
+      "name": "Feature tile",
+      "kind": "card",
+      "refersTo": "tile",
+      "description": "Bento capability tile — flat on ink at rest, lifts on hover.",
+      "html": "<div class=\"ds-tile\"><h3 class=\"ds-tile-h\">Cash &amp; interest</h3><p class=\"ds-tile-p\">Available balance per currency, plus interest accruing.</p><div class=\"ds-cash\">€3,410.55</div><div class=\"ds-cash-sub\">EUR available · 2.00% p.a.</div></div>",
+      "css": ".ds-tile{background:linear-gradient(180deg,#141518,#0e0f12);border:1px solid #23262d;border-radius:22px;padding:26px;max-width:320px;transition:transform .4s cubic-bezier(.22,1,.36,1),border-color .4s,box-shadow .4s}.ds-tile:hover{transform:translateY(-4px);border-color:#2c3038;box-shadow:0 30px 60px -40px rgba(0,0,0,0.8)}.ds-tile-h{font-family:'TR Sans Display',sans-serif;font-size:1.32rem;font-weight:680;letter-spacing:-0.03em;margin:0 0 8px;color:#f4f5f7}.ds-tile-p{font-family:'TR Sans Display',sans-serif;color:#a6acb8;font-size:15px;font-weight:500;margin:0 0 16px}.ds-cash{font-family:'TR Sans Display',sans-serif;font-size:27px;font-weight:740;letter-spacing:-0.03em;color:#f4f5f7;font-variant-numeric:tabular-nums}.ds-cash-sub{font-family:'TR Sans Display',sans-serif;font-size:12.5px;color:#a6acb8;font-weight:580;margin-top:3px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Conversational Ledger",
+    "overview": "The dark-native landing and connect experience for an unofficial, read-only tool that lets an AI agent read a portfolio. One idea: you talk, your account answers. An ink surface lit by a single Trade Republic red glow with a fine grain film; the centerpiece is a luminous, keyboard-driven command instrument where plain-English questions stream back real balances and deltas. One continuous world across four surfaces — landing, connect/auth flow, Scalar API reference, and markdown guide — sharing the same ink, red, TR Sans and glow. Native to Trade Republic's language, never impersonating the official product.",
+    "keyCharacteristics": [
+      "Dark-native ink surface, lit by one Trade Republic red glow + fine grain.",
+      "One variable display typeface (TR Sans Display) carrying the whole hierarchy through weight (500→740).",
+      "An interactive, keyboard-driven command instrument as the signature moment.",
+      "Motion that clarifies, never bounces — exponential ease-out, buttery Lenis scroll, honored prefers-reduced-motion.",
+      "Financial numerics always tabular; green/red reserved strictly for gains/losses."
+    ],
+    "rules": [
+      { "name": "The One Red Rule", "body": "Trade Republic Red touches ≤10% of any screen. It is a signal and a light source, not a theme.", "section": "colors" },
+      { "name": "The Two-Reds Rule", "body": "The luminous #ff4034 is for light (glow, underline, dots, accents, red-on-dark text). The deeper #d92d22 is for button fills under white text. Never put white text on #ff4034; never use #d92d22 for a glow.", "section": "colors" },
+      { "name": "The Green-Means-Money Rule", "body": "Green appears only on a positive financial delta — never as decorative success.", "section": "colors" },
+      { "name": "The Tonal-Depth Rule", "body": "On dark, depth comes from stepping the ink ramp (BG → panel → panel-3), not from resting drop-shadows on ordinary surfaces.", "section": "colors" },
+      { "name": "The Weight-Not-Width Rule", "body": "Hierarchy is carried by weight (500→740) inside one family. Never introduce a second sans; never stretch body text into a display face.", "section": "typography" },
+      { "name": "The Kicker-Restraint Rule", "body": "The red kicker names a section theme, not scaffolding. If every section has one, delete most of them.", "section": "typography" },
+      { "name": "The Tabular-Numbers Rule", "body": "Every financial figure uses font-variant-numeric: tabular-nums.", "section": "typography" },
+      { "name": "The Earned-Elevation Rule", "body": "Standing shadows belong only to signature surfaces (instrument, dock, glow, toast). Content tiles are flat until hover.", "section": "elevation" },
+      { "name": "The Glass-Is-Rare Rule", "body": "Glassmorphism exists in one place — the dock. Do not spread blur-and-glass to other panels.", "section": "elevation" },
+      { "name": "The Restrained-Glow Rule", "body": "Red glow is atmosphere and emphasis (one hero glow, CTA halos, the instrument edge), not a coat of paint on every element.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep Trade Republic Red under ~10% of any screen — signal and light, not theme.",
+      "Do use #ff4034 for glow/accents/red-on-dark text, and #d92d22 for button fills under white text.",
+      "Do carry all hierarchy through TR Sans Display weights (500→740); pair only with mono for typed content.",
+      "Do set every financial figure in tabular numerics, and reserve green strictly for positive deltas.",
+      "Do build depth on dark by stepping the ink ramp; let standing shadow be earned by signature surfaces only.",
+      "Do keep glow sparse and purposeful (one hero glow, CTA halos, instrument edge).",
+      "Do gate scroll-reveal behind an html.js class so content is visible without JS (never ship a blank section).",
+      "Do keep every surface (landing, auth, docs) on the same tokens, and keep the unofficial disclaimer legible."
+    ],
+    "donts": [
+      "Don't ship generic SaaS-landing clichés: no hero-metric block, no wall of identical icon cards, no gradient text, no uppercase kicker above every section.",
+      "Don't drift into corporate-bank gravitas: no navy-and-gold, no stock photography, no legalese.",
+      "Don't counterfeit Trade Republic — quote the brand cues, never clone the official site or bury the unaffiliated notice.",
+      "Don't put white text on #ff4034 (fails AA); use #d92d22. And don't let muted grays fall below their AA floors on ink.",
+      "Don't use a colored border-left/border-right stripe as an accent on cards, callouts, or list items.",
+      "Don't spread glassmorphism beyond the dock, or paint red glow onto every element.",
+      "Don't gate content visibility on a scroll transition, or leave the docs shells on their old off-brand blue/slate."
+    ]
+  }
+}
